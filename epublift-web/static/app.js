@@ -39,7 +39,7 @@ const verpills = document.getElementById('verpills');
 const imgfmtpills = document.getElementById('imgfmtpills');
 const ver34note = document.getElementById('ver34note');
 let ver = '3.3';
-let imgfmt = 'webp';
+let imgfmt = 'keep';
 
 // Per-mode configuration: which file type, which i18n keys, which endpoint.
 const MODE_CFG = {
@@ -153,9 +153,10 @@ if (verpills) verpills.querySelectorAll('.pill').forEach(p => {
     ver = p.dataset.ver;
     verpills.querySelectorAll('.pill').forEach(x => x.classList.toggle('on', x === p));
     updateOptionVisibility();
-    // Snap the image format to the new version's default (3.3 → WebP, 3.4 → AVIF);
-    // AVIF/JPEG XL pills don't exist on 3.3.
-    setImgfmt(ver === '3.4' ? 'avif' : 'webp', false);
+    // Snap the image format to the new version's default (3.3 → Keep original,
+    // 3.4 → AVIF: asking for 3.4 is asking for its image formats); AVIF/JPEG XL
+    // pills don't exist on 3.3.
+    setImgfmt(ver === '3.4' ? 'avif' : 'keep', false);
     renderKepubDesc(); // filename in the .kepub note follows the version
   });
 });
@@ -1088,6 +1089,7 @@ async function doSave(){
 mFetch.addEventListener('click', doEnrich);
 mSave.addEventListener('click', doSave);
 
-// Initialize the default mode (also sets the per-mode option visibility).
-applyMode('optimize');
+// Open on Validate, the first step: check a book before changing it (also
+// sets the per-mode option visibility).
+applyMode('validate');
 renderKepubDesc(); // initial render of the .kepub note with the current version

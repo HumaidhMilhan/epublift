@@ -65,7 +65,8 @@ struct Args {
     #[arg(short, long)]
     output: Option<PathBuf>,
 
-    /// WebP compression quality from 1 to 100 (default: 80)
+    /// Image quality, 1 to 100, when images are re-encoded (`--webp`, or the
+    /// AVIF/JPEG XL of `--target 3.4`).
     #[arg(short, long, default_value_t = 80)]
     quality: i32,
 
@@ -85,15 +86,22 @@ struct Args {
     #[arg(long)]
     kepub: bool,
 
-    /// Keep images in their original format (skip JPEG/PNG -> WebP). Use this for
-    /// readers that don't render WebP — notably Kobo e-ink devices. Structure is
-    /// still upgraded to EPUB 3.3.
+    /// Re-encode JPEG and PNG images to WebP for a smaller file (size-safe: an
+    /// image is replaced only when the WebP is smaller). Off by default: images
+    /// are kept as they are, because many readers — Kobo e-ink among them —
+    /// do not show WebP.
+    #[arg(long, conflicts_with = "keep_images")]
+    webp: bool,
+
+    /// Keep images in their original format. This is the default; the flag is
+    /// kept so existing scripts keep working, and it overrides --target 3.4's
+    /// image conversion.
     #[arg(long)]
     keep_images: bool,
 
     /// With --kepub, emit WebP images instead of keeping originals. Only for Kobo
     /// devices that have the WebP image plugin installed (see kobo-webp-plugin/);
-    /// without it, Kobo shows blank images. No effect unless --kepub is set.
+    /// without it, Kobo shows blank images. Same as --kepub --webp.
     #[arg(long)]
     kepub_webp: bool,
 
@@ -389,7 +397,8 @@ struct MetaSetArgs {
     /// Set the series, as `Name` or `Name:position` (e.g. `Dune:2`).
     #[arg(long, value_name = "NAME[:POS]")]
     series: Option<String>,
-    /// Set the print ISBN (written as `dc:source` `urn:isbn:…`).
+    /// Set the ISBN (written as a `dc:identifier`; an existing equal ISBN is
+    /// left as it is).
     #[arg(long)]
     isbn: Option<String>,
     /// Make this JPEG or PNG the cover (put in as given, at most 10 MB).
@@ -409,7 +418,10 @@ struct MetaEnrichArgs {
     /// ISBN to look up (ISBN-13 recommended; hyphens allowed).
     #[arg(long)]
     isbn: String,
-    /// Override the book's language (BCP-47) when the OPF has no `dc:language`.
+    /// The book's language (BCP-47) for the language policy: catalogue fields
+    /// in another language are skipped. Defaults to the book's `dc:language`
+    /// (required when the book has none). Never written into the book; use
+    /// `meta set --language` for that.
     #[arg(long)]
     lang: Option<String>,
     /// Metadata provider: `openlibrary` (default) or `google` (Google Books).
@@ -471,8 +483,14 @@ struct RestoreArgs {
     #[arg(long)]
     modernize: bool,
 
-    /// Keep original images (no WebP) when re-targeting — for readers that don't
-    /// render WebP, e.g. Kobo e-ink.
+    /// Re-encode JPEG and PNG images to WebP when re-targeting (implies a
+    /// re-target to 3.3). Off by default: images are kept as they are.
+    #[arg(long, conflicts_with = "keep_images")]
+    webp: bool,
+
+    /// Keep original images when re-targeting. This is the default; the flag
+    /// is kept so existing scripts keep working (and it still asks for a
+    /// re-target).
     #[arg(long)]
     keep_images: bool,
 
@@ -486,7 +504,8 @@ struct RestoreArgs {
     #[arg(long)]
     kepub_webp: bool,
 
-    /// WebP quality (1-100) when re-targeting with image conversion.
+    /// Image quality (1-100) when re-targeting re-encodes images (`--webp`,
+    /// `--target 3.4`).
     #[arg(short, long, default_value_t = 80)]
     quality: i32,
 
@@ -1377,19 +1396,24 @@ fn run_convert(args: Args) -> Result<()> {
     #[cfg(not(feature = "epub34"))]
     let image_policy = None;
 
+    // Images are kept unless conversion is asked for: --webp, or EPUB 3.4,
+    // whose point is its new image formats (--keep-images still overrides it).
+    let convert_images = args.webp
+        || (args.kepub && args.kepub_webp)
+        || (target_version == EpubVersion::V3_4 && !args.keep_images);
     let mut options = Options {
         quality: args.quality.clamp(1, 100) as u8,
         ascii: args.ascii,
         target_version,
-        image_strategy: if args.keep_images {
-            ImageStrategy::KeepOriginal
-        } else {
+        image_strategy: if convert_images {
             ImageStrategy::WebP
+        } else {
+            ImageStrategy::KeepOriginal
         },
         image_policy,
         avif_speed: 4,
         kepub: args.kepub,
-        kepub_webp: args.kepub_webp,
+        kepub_webp: args.kepub_webp || (args.kepub && args.webp),
         packaging,
         output: args.output.clone(),
     };
@@ -1417,7 +1441,11 @@ fn run_convert(args: Args) -> Result<()> {
 
     println!("[*] Starting optimization for: {}", input_name);
     println!("[*] Target output path: {}", output_path.display());
-    println!("[*] WebP Image Quality: {}%", options.quality);
+    if convert_images {
+        println!("[*] Image quality: {}%", options.quality);
+    } else {
+        println!("[*] Images: kept as they are (--webp re-encodes them)");
+    }
 
     let report = epublift::convert(&input, &options, |msg| println!("{}", msg))?;
 
@@ -1514,6 +1542,7 @@ fn run_restore(args: &RestoreArgs) -> Result<()> {
     let retarget = args.target.is_some()
         || args.modernize
         || args.keep_images
+        || args.webp
         || args.kepub
         || image_policy.is_some();
     let target_version = if image_policy.is_some() {
@@ -1558,15 +1587,18 @@ fn run_restore(args: &RestoreArgs) -> Result<()> {
             quality: args.quality.clamp(1, 100) as u8,
             ascii: false,
             target_version,
-            image_strategy: if args.keep_images {
-                ImageStrategy::KeepOriginal
-            } else {
+            image_strategy: if args.webp
+                || (args.kepub && args.kepub_webp)
+                || (target_version == EpubVersion::V3_4 && !args.keep_images)
+            {
                 ImageStrategy::WebP
+            } else {
+                ImageStrategy::KeepOriginal
             },
             image_policy,
             avif_speed: 4,
             kepub: args.kepub,
-            kepub_webp: args.kepub_webp,
+            kepub_webp: args.kepub_webp || (args.kepub && args.webp),
             packaging: epublift::Packaging::Deflate,
             output: None,
         };
@@ -1624,7 +1656,9 @@ fn retarget_label(args: &RestoreArgs, target_version: EpubVersion) -> String {
     } else {
         parts.push(format!("EPUB {}", target_version.tag()));
     }
-    if args.keep_images {
+    if args.webp || (args.kepub && args.kepub_webp) {
+        parts.push("WebP images".to_string());
+    } else if target_version != EpubVersion::V3_4 || args.keep_images {
         parts.push("original images".to_string());
     }
     parts.join(", ")

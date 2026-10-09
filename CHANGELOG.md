@@ -10,6 +10,34 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+### Changed
+- **cli (breaking): images are kept as they are by default.** `epublift -i
+  book.epub` upgrades the structure and leaves JPEG and PNG untouched; add
+  `--webp` to re-encode them to WebP (size-safe, as before). Many readers,
+  Kobo e-ink among them, show WebP blank, so keeping images is the default
+  that works everywhere. `--keep-images` still works (it is now the default),
+  `--target 3.4` still re-encodes to its formats unless `--keep-images` is
+  given, and `--kepub --webp` is the same as `--kepub --kepub-webp`. `restore`
+  follows the same rules, with `--webp` for WebP on re-target.
+- **web: Keep original is the pre-selected image format** in Optimize and
+  Restore; WebP is one click away.
+- **web: the modes follow the order a book goes through them:** Validate,
+  Repair, Metadata, Optimize, then Archive, Restore, Import, Smart. The page
+  opens on Validate, and the opening text (13 languages) tells that order:
+  check, repair where a fix is certain, complete the metadata, modernize.
+- **The `gen-sample` test-book binary needs the `gen-sample` feature**
+  (`cargo run --features gen-sample --bin gen-sample`), so installing the
+  crate installs `epublift` alone. The package sent to crates.io holds only
+  the code, README, LICENSE and CHANGELOG.
+
+### Fixed
+- **`-V` no longer says `.dirty` for a clean `cargo install --git` build**
+  (Cargo's untracked `.cargo-ok` marker counted as a change), and takes no
+  hash from a repository the crate merely sits inside.
+- **Help texts:** `meta enrich --lang` applies even when the book has a
+  `dc:language` and is never written into the book; `meta set --isbn` writes
+  a `dc:identifier`, not `dc:source`; `-q/--quality` covers AVIF/JPEG XL too.
+
 ## [cli-v3.3.0] - 2026-10-08
 
 ### Added

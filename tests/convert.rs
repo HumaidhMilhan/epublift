@@ -228,7 +228,11 @@ fn full_legacy_epub_is_modernized() {
     let input = dir.path().join("legacy.epub");
     build_epub(&input, &legacy_with_images());
 
-    let report = convert(&input, &Options::default(), |_| {}).unwrap();
+    let webp = Options {
+        image_strategy: epublift::ImageStrategy::WebP,
+        ..Options::default()
+    };
+    let report = convert(&input, &webp, |_| {}).unwrap();
 
     // --- Report ---
     assert_eq!(report.input_name, "legacy.epub");
@@ -324,7 +328,11 @@ fn larger_webp_keeps_the_original_image() {
     let input = dir.path().join("keep.epub");
     build_epub(&input, &legacy_with_keepable_png());
 
-    let report = convert(&input, &Options::default(), |_| {}).unwrap();
+    let webp = Options {
+        image_strategy: epublift::ImageStrategy::WebP,
+        ..Options::default()
+    };
+    let report = convert(&input, &webp, |_| {}).unwrap();
 
     // No image is ever written larger than its source.
     for m in &report.image_metrics {
@@ -513,6 +521,20 @@ fn kepub_injects_kobospans_and_names_output() {
         chapter.contains("<!DOCTYPE html>"),
         "DOCTYPE still modernized"
     );
+}
+
+#[test]
+fn images_are_kept_by_default() {
+    // The default keeps JPEG and PNG as they are; WebP is opt-in.
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("legacy.epub");
+    build_epub(&input, &legacy_with_images());
+
+    let report = convert(&input, &Options::default(), |_| {}).unwrap();
+    assert!(report.image_metrics.is_empty());
+    let names = entry_names(&report.output_path);
+    assert!(names.iter().any(|n| n == "OEBPS/images/cover.jpg"));
+    assert!(!names.iter().any(|n| n.ends_with(".webp")));
 }
 
 #[test]

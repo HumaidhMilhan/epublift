@@ -1,8 +1,8 @@
 # Reader image-format compatibility
 
 Which e-readers actually **render** which image formats inside an EPUB. This
-drives ePubLift's defaults — e.g. why [`--keep-images`](usage.md) is on by
-default for Kobo and `--kepub` output (Kobo shows WebP as blank pages).
+drives ePubLift's defaults — e.g. why images are [kept as they are](usage.md)
+unless you ask for `--webp` (Kobo shows WebP as blank pages).
 
 **Scope: we only list what we have verified ourselves on real hardware.** This
 is deliberately a short, honest table rather than a spec sheet copied from
@@ -15,7 +15,7 @@ What we have confirmed first-hand on real hardware.
 
 | Device | Model(s) tested | JPG / PNG | WebP | AVIF / JXL | Our recommendation |
 |--------|-----------------|:---------:|:----:|:----------:|--------------------|
-| **Kobo** (e-ink) | Forma, Sage | ✅ | ❌ | — | `--keep-images` (and `--kepub` for Kobo's page-turn/stats features) |
+| **Kobo** (e-ink) | Forma, Sage | ✅ | ❌ | — | default (images kept; `--kepub` for Kobo's page-turn/stats features) |
 | **Apple Books** | macOS, iOS | ✅ | ✅ | — | Default — `epublift -i book.epub` (WebP renders fine) |
 
 **Legend** — ✅ renders correctly · ❌ fails (image shown blank) · — not yet
@@ -25,8 +25,8 @@ Notes:
 - **Kobo / WebP** — confirmed on Forma and Sage: WebP images appear as blank
   pages, even though the files inside the EPUB are valid (the same book renders
   fine in Apple Books). This is a reader-engine limitation, not a packaging bug.
-  → Use `--keep-images` (default on for `--kepub`) to keep the original JPEG/PNG,
-  **or** install our [Kobo WebP plugin](#making-webp-render-on-kobo-community-plugin).
+  → Leave out `--webp` (images are kept by default) to keep the original
+  JPEG/PNG, **or** install our [Kobo WebP plugin](#making-webp-render-on-kobo-community-plugin).
 - **Apple Books** is a reading *app*, not a device; we list it because it was our
   control when verifying the Kobo WebP issue.
 - **AVIF / JXL** are grouped because they're the next-generation formats EPUB 3.4
@@ -61,7 +61,7 @@ Plain `.epub` library cover thumbnails come from Kobo's separate, **non-Qt**
 `.kepub.epub`.** The plugin is an **unofficial, at-your-own-risk** device
 modification — see [`kobo-webp-plugin/README.md`](../kobo-webp-plugin/README.md).
 
-If you'd rather not modify your device, `--keep-images` (keep JPEG/PNG) remains
+If you'd rather not modify your device, the default (keep JPEG/PNG) remains
 the zero-risk option.
 
 ## Reported (vendor docs / community — not tested by us)
@@ -74,17 +74,17 @@ Treat this section as a planning guide, not a guarantee.
 
 | Reader / engine | Basis | JPG / PNG | WebP | AVIF / JXL | Our recommendation |
 |-----------------|-------|:---------:|:----:|:----------:|--------------------|
-| **Amazon Kindle** | vendor docs | ✅ | ❌ | ❌ | `--keep-images` — Kindle converts EPUB on import and supports JPG/PNG/GIF/BMP only |
-| **PocketBook** (e-ink) | vendor docs | ✅ | ❌ | ❌ | `--keep-images` |
-| **Onyx Boox** (stock NeoReader) | vendor docs | ✅ | ❌ | ❌ | `--keep-images` for the stock reader; WebP/modern formats may work in a third-party Android reading app (see camps below) |
-| **Adobe Digital Editions** & RMSDK-based readers (Nook, Tolino, many others) | engine behaviour | ✅ | ❌ | ❌ | `--keep-images` |
+| **Amazon Kindle** | vendor docs | ✅ | ❌ | ❌ | default (images kept) — Kindle converts EPUB on import and supports JPG/PNG/GIF/BMP only |
+| **PocketBook** (e-ink) | vendor docs | ✅ | ❌ | ❌ | default (images kept) |
+| **Onyx Boox** (stock NeoReader) | vendor docs | ✅ | ❌ | ❌ | default (images kept) for the stock reader; WebP/modern formats may work in a third-party Android reading app (see camps below) |
+| **Adobe Digital Editions** & RMSDK-based readers (Nook, Tolino, many others) | engine behaviour | ✅ | ❌ | ❌ | default (images kept) |
 
 **Legend (reported)** — ✅ documented as supported · ❌ not in the vendor's
 documented list (likely unsupported, but untested by us) · — no information.
 
 The pattern is consistent: outside Apple Books (and Android reading apps),
 **WebP is generally not supported by dedicated e-ink readers**, and AVIF/JXL
-nowhere. When in doubt for an e-ink target, `--keep-images` is the safe choice.
+nowhere. When in doubt for an e-ink target, leave out `--webp`: the default keeps your images.
 
 ## The two e-ink camps (this part won't go stale)
 
@@ -130,8 +130,8 @@ include:
 
 - exact device + model and firmware version,
 - the format(s) tested and whether each **rendered** or showed **blank**,
-- how the test EPUB was produced (e.g. `epublift -i book.epub` for WebP, or
-  `--keep-images` for the JPEG/PNG control),
+- how the test EPUB was produced (e.g. `epublift -i book.epub --webp` for WebP,
+  or `epublift -i book.epub` for the JPEG/PNG control),
 - ideally a cross-check in a known-good reader (Apple Books) to rule out a bad
   file.
 

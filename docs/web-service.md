@@ -3,9 +3,9 @@
 ePubLift ships a small **web service**: drag-and-drop an EPUB in your browser and
 choose a mode from the switcher at the top of the panel:
 
-- **Optimize** — modernize to EPUB 3.3 and re-encode images to WebP, with an
-  in-page audit report (the classic flow). Options: image quality, ASCII
-  filenames, *keep original images*, and Kobo `.kepub` output. A **Target
+- **Optimize** — modernize to EPUB 3.3, keeping images as they are (pick
+  *WebP* to re-encode them smaller), with an in-page audit report. Options:
+  image format, image quality, ASCII filenames, and Kobo `.kepub` output. A **Target
   version** selector also offers **EPUB 3.4** (experimental) — the draft spec's
   new **AVIF** / **JPEG XL** image formats; pick AVIF, JPEG XL, or keep original.
 - **Archive** — pack a book into a compact, **lossless** [`.eparc`](archiving.md)
@@ -14,7 +14,7 @@ choose a mode from the switcher at the top of the panel:
   for storage and restore it when you want to read.
 - **Restore** — turn an `.eparc` back into a working `.epub`. **Content-exact by
   default** (the original book, byte-for-byte per entry); flip on **Modernize**
-  to re-run the optimizer on the way out (EPUB 3.3, WebP, `--keep-images`,
+  to re-run the optimizer on the way out (EPUB 3.3, images kept or WebP,
   `.kepub`).
 - **Metadata** — fix a book's [metadata](metadata.md): drop an `.epub` to load an
   editable form, optionally **Fetch** by ISBN from **Open Library** or **Google

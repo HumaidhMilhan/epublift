@@ -10,7 +10,7 @@ name = "epublift"
 version = "3.3.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
-description = "Modernize and optimize EPUB files — upgrade structure and re-encode images"
+description = "EPUB toolbox: upgrade to EPUB 3.3, optionally shrink images to WebP, validate, repair, edit metadata, archive"
 readme = "README.md"
 # Minimum supported Rust: kept at latest stable minus two, reviewed at every
 # release, so a dependency raising its own minimum rarely gets ahead of us. The
@@ -22,6 +22,9 @@ repository = "https://github.com/ePubLift/epublift"
 homepage = "https://github.com/ePubLift/epublift"
 keywords = ["epub", "webp", "ebook", "epub3", "converter"]
 categories = ["command-line-utilities", "multimedia::images"]
+# What goes to crates.io: the code and the files a reader of the crate needs.
+# The Kobo plugin binaries, Docker and CI files stay in the repository.
+include = ["/src/**/*", "/build.rs", "/README.md", "/LICENSE", "/CHANGELOG.md"]
 
 # Debian/Ubuntu/Raspberry Pi OS package metadata (used by `cargo deb` in the
 # release workflow). Only the `epublift` binary ships; `target/release/epublift`
@@ -30,7 +33,7 @@ categories = ["command-line-utilities", "multimedia::images"]
 maintainer = "Baris Kayadelen <baris@kayadelen.com>"
 section = "utils"
 priority = "optional"
-extended-description = "Modernize and optimize EPUB files (upgrade to EPUB 3.3, re-encode images to WebP), and archive/restore a personal library as compact .eparc files."
+extended-description = "Modernize EPUB files (upgrade to EPUB 3.3, keeping images or re-encoding them to WebP), validate and repair them, edit their metadata, and archive/restore a personal library as compact .eparc files."
 assets = [
     ["target/release/epublift", "usr/bin/", "755"],
     ["README.md", "usr/share/doc/epublift/README.md", "644"],
@@ -55,6 +58,7 @@ path = "src/main.rs"
 [[bin]]
 name = "gen-sample"
 path = "src/bin/gen_sample.rs"
+required-features = ["gen-sample"]
 
 # Dev-only benchmark for the experimental Zstd-OCF research track. Built only
 # when the feature is enabled, so it never ships in a release artifact.
@@ -232,6 +236,9 @@ butteraugli = ["dep:butteraugli"]
 # AVIF inputs (a loop-restoration SIMD bug). The bench catches those panics and
 # excludes the affected images from the comparison (see src/bin/img_calib.rs).
 img-calib = ["epub34", "dep:butteraugli", "zenjxl?/decode"]
+# Dev-only: the `gen-sample` binary that writes a legacy EPUB 2.0 test book.
+# Behind a feature so `cargo install epublift` installs `epublift` alone.
+gen-sample = []
 rustls = ["dep:rustls"]
 rustls-rustcrypto = ["dep:rustls-rustcrypto"]
 webpki-roots = ["dep:webpki-roots"]

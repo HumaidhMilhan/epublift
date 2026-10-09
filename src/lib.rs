@@ -98,17 +98,20 @@ impl EpubVersion {
 
 /// How raster images are handled during conversion.
 ///
-/// `WebP` is the default and yields the smallest files on readers that support
-/// it (Apple Books, Calibre, most apps). `KeepOriginal` leaves JPEG/PNG images
-/// untouched for maximum device compatibility — notably **Kobo e-ink readers do
-/// not render WebP** despite claiming EPUB 3.3 support, so a Kobo target needs
-/// the originals kept. The enum leaves room for AVIF/JXL once EPUB 3.4 lands.
+/// `KeepOriginal` is the default: JPEG/PNG images are left untouched, for
+/// every reading system — notably **Kobo e-ink readers do not render WebP**
+/// despite claiming EPUB 3.3 support, and publishers and readers alike
+/// distrust a format their devices may not show. `WebP` re-encodes them for
+/// the smallest files on readers that support it (Apple Books, calibre, most
+/// apps); despite its name it means "convert", and [`Options::image_policy`]
+/// / the target version pick the format (AVIF/JXL under EPUB 3.4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ImageStrategy {
-    /// Convert JPEG/PNG to WebP (size-safe: never grows, never upscales).
-    #[default]
+    /// Convert JPEG/PNG (size-safe: never grows, never upscales). WebP for
+    /// EPUB 3.3; the format follows [`Options::image_policy`] otherwise.
     WebP,
     /// Leave images in their original format; only upgrade structure.
+    #[default]
     KeepOriginal,
 }
 
@@ -527,10 +530,10 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
     // keeps originals by default because stock Kobo e-ink can't render WebP;
     // `kepub_webp` opts back into WebP for devices with the WebP plugin
     // (see kobo-webp-plugin/).
-    let image_strategy = if options.kepub && !options.kepub_webp {
-        ImageStrategy::KeepOriginal
-    } else {
-        options.image_strategy
+    let image_strategy = match (options.kepub, options.kepub_webp) {
+        (true, true) => ImageStrategy::WebP,
+        (true, false) => ImageStrategy::KeepOriginal,
+        (false, _) => options.image_strategy,
     };
     let opt = match image_strategy {
         ImageStrategy::WebP => {

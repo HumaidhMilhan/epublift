@@ -390,19 +390,16 @@
   </header>
 
   <section class="hero">
-    <span class="kicker reveal d2" data-i18n-html="hero_kicker">Modernize · Archive · Metadata</span>
+    <span class="kicker reveal d2" data-i18n-html="hero_kicker">Validate · Repair · Metadata · Optimize</span>
     <h1 class="reveal d2" data-i18n-html="hero_title">Give your old<br>e-books a <em>lift.</em></h1>
-    <p class="lede reveal d3" data-i18n-html="hero_lede">Drop in a tired <b>EPUB&nbsp;2</b> file and get back a modern, standards-compliant <b>EPUB&nbsp;3.3</b> — images re-encoded to <b>WebP</b>, structure upgraded, file size trimmed. Or <b>archive</b> a book to a compact <b>.eparc</b> and <b>restore</b> it whenever you like. Fix its <b>metadata</b> too — by hand or auto-filled from an ISBN. No install, no account. <b>Right here in your browser.</b></p>
+    <p class="lede reveal d3" data-i18n-html="hero_lede">Drop in an <b>EPUB</b> and <b>check</b> it against the spec first — right in your browser, without uploading it. Where a fix is certain to be right, <b>repair</b> it. Complete its <b>metadata</b> and cover, by hand or from an ISBN. Then <b>modernize</b> it to a standards-compliant <b>EPUB&nbsp;3.3</b>: structure upgraded, images kept as they are, or re-encoded to <b>WebP</b> if you choose. You can also <b>archive</b> a book to a compact <b>.eparc</b> and <b>restore</b> it later, or <b>import a PDF</b> into a reflowable EPUB. No install, no account.</p>
   </section>
 
   <!-- converter -->
   <div class="panel reveal d4">
     <!-- mode switch -->
     <div class="modeswitch" id="modeswitch" role="tablist" aria-label="Mode">
-      <button type="button" class="mode on" data-mode="optimize" role="tab" aria-selected="true">
-        <span data-i18n="mode_optimize">Optimize</span><small data-i18n="mode_optimize_sub">.epub → 3.3</small>
-      </button>
-      <button type="button" class="mode" data-mode="validate" role="tab" aria-selected="false">
+      <button type="button" class="mode on" data-mode="validate" role="tab" aria-selected="true">
         <span data-i18n="mode_validate">Validate</span><small data-i18n="mode_validate_sub">.epub → report</small>
       </button>
       <button type="button" class="mode" data-mode="repair" role="tab" aria-selected="false">
@@ -410,6 +407,9 @@
       </button>
       <button type="button" class="mode" data-mode="metadata" role="tab" aria-selected="false">
         <span data-i18n="mode_metadata">Metadata</span><small data-i18n="mode_metadata_sub">edit · ISBN</small>
+      </button>
+      <button type="button" class="mode" data-mode="optimize" role="tab" aria-selected="false">
+        <span data-i18n="mode_optimize">Optimize</span><small data-i18n="mode_optimize_sub">.epub → 3.3</small>
       </button>
       <button type="button" class="mode" data-mode="archive" role="tab" aria-selected="false">
         <span data-i18n="mode_archive">Archive</span><small data-i18n="mode_archive_sub">.epub → .eparc</small>
@@ -570,8 +570,8 @@
         <div data-modes="optimize restore" data-mz="1">
           <p class="opt-h" style="margin-bottom:10px" data-i18n="imgfmt_h">Image format</p>
           <div class="pills pills-3" id="imgfmtpills">
-            <div class="pill" data-fmt="keep"><span data-i18n="imgfmt_keep">Keep original</span><small data-i18n="imgfmt_keep_sub">No re-encode</small></div>
-            <div class="pill on" data-fmt="webp">WebP<small data-i18n="imgfmt_webp_sub">Standard, smaller</small></div>
+            <div class="pill on" data-fmt="keep"><span data-i18n="imgfmt_keep">Keep original</span><small data-i18n="imgfmt_keep_sub">No re-encode</small></div>
+            <div class="pill" data-fmt="webp">WebP<small data-i18n="imgfmt_webp_sub">Standard, smaller</small></div>
             <div class="pill" data-fmt="avif" data-modes="optimize" data-ver="3.4">AVIF<small data-i18n="imgfmt_avif_sub">Smallest on photos</small></div>
             <div class="pill" data-fmt="jxl" data-modes="optimize" data-ver="3.4">JPEG XL<small data-i18n="imgfmt_jxl_sub">Newest codec</small></div>
           </div>

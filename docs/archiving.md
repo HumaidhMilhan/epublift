@@ -38,17 +38,18 @@ reader you're using (nothing extra is stored; it re-runs the optimizer):
 
 ```bash
 epublift restore book.eparc                 # content-exact original (default)
-epublift restore book.eparc --target 3.3    # re-emit as EPUB 3.3 (WebP images)
-epublift restore book.eparc --keep-images   # modernized, but original JPEG/PNG (e.g. Kobo)
+epublift restore book.eparc --target 3.3    # re-emit as EPUB 3.3 (original images)
+epublift restore book.eparc --webp          # re-emit as EPUB 3.3, images re-encoded to WebP
 epublift restore book.eparc --kepub         # → book_v3.3.kepub.epub for Kobo
 ```
 
 | Flag | Effect |
 | :--- | :--- |
 | *(none)* | Content-exact original `.epub` |
-| `--target 3.3` | Re-emit at EPUB 3.3 (images converted to WebP) |
+| `--target 3.3` | Re-emit at EPUB 3.3 (original JPEG/PNG kept) |
 | `--modernize` | Alias for `--target 3.3` |
-| `--keep-images` | Re-target but keep original JPEG/PNG (for non-WebP readers like Kobo) |
+| `--webp` | Re-target, and re-encode JPEG/PNG to WebP where smaller |
+| `--keep-images` | Re-target, keeping original images (the default; kept for existing scripts) |
 | `--kepub` | Produce a Kobo `.kepub.epub` |
 | `-q`, `--quality` | WebP quality (1-100) when re-targeting |
 

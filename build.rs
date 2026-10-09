@@ -36,10 +36,23 @@ fn build_metadata() -> String {
         let short: String = sha.trim().chars().take(7).collect();
         return format!("+{short}");
     }
+    // Only this package's own repository counts: a crate unpacked from
+    // crates.io has none, and must not pick up the hash of whatever repository
+    // happens to contain the build directory.
+    let own_repo = git(&["rev-parse", "--show-toplevel"]).is_some_and(|top| {
+        let here = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
+        let canon = |p: &str| std::fs::canonicalize(p).ok();
+        canon(&top).is_some() && canon(&top) == canon(&here)
+    });
+    if !own_repo {
+        return String::new();
+    }
     let Some(hash) = git(&["rev-parse", "--short=7", "HEAD"]) else {
         return String::new();
     };
-    let dirty = match git(&["status", "--porcelain"]) {
+    // Untracked files do not make a build dirty: `cargo install --git` drops a
+    // `.cargo-ok` marker into its clean checkout.
+    let dirty = match git(&["status", "--porcelain", "--untracked-files=no"]) {
         Some(s) if !s.is_empty() => ".dirty",
         _ => "",
     };
