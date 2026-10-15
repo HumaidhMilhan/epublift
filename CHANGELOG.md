@@ -59,6 +59,15 @@ are tagged with the component they belong to.
   the code, README, LICENSE and CHANGELOG.
 
 ### Fixed
+- **The upgrade translates EPUB 2 metadata to EPUB 3** instead of carrying
+  attributes EPUB 3 forbids. `opf:role`, `opf:file-as` and an identifier's
+  `opf:scheme` become `<meta refines>` (`role`, with `scheme="marc:relators"`
+  for a MARC code; `file-as`; `identifier-type`). Of several `dc:date`s one
+  stays (publication first); a modification date gives way to
+  `dcterms:modified`, a creation date becomes `dcterms:created`. On 562
+  books this removed every `opf:*` error the upgrade used to add (476 books).
+- **An SVG 1.1 DOCTYPE is dropped on upgrade** (`OPF-073`: EPUB 3 allows no
+  external identifier on SVG), unless it declares entities the file needs.
 - **A conversion that makes the book larger says so**: "Size grew from 0.86
   MB to 0.92 MB (+6.7%)" instead of "Size reduced … (-6.7% savings)". The
   first line of `--help` no longer says images are converted to WebP.

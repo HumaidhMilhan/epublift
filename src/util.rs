@@ -120,20 +120,32 @@ pub fn slugify_ascii(stem: &str) -> String {
 /// Standardize HTML/XHTML files to EPUB 3 best practices:
 /// - Replace legacy DOCTYPE declarations with the HTML5 `<!DOCTYPE html>`.
 /// - Ensure the XHTML namespace is declared on the `<html>` element.
+/// - Drop an SVG 1.1 DOCTYPE (`OPF-073`: EPUB 3 allows no external identifier
+///   on SVG), unless it has an internal subset, whose entities the file needs.
 pub fn standardize_xhtml_files(root: &Path, progress: &dyn Fn(&str)) -> Result<()> {
     let doctype_re = Regex::new(r"(?i)<!DOCTYPE\s+html[^>]*>").unwrap();
+    let svg_doctype_re = Regex::new(r"<!DOCTYPE\s+svg\s+(?:PUBLIC|SYSTEM)[^>\[]*>\s*").unwrap();
 
     for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
         if !entry.file_type().is_file() {
             continue;
         }
         let path = entry.path();
-        let is_html = path
+        let ext = path
             .extension()
             .and_then(|e| e.to_str())
-            .map(|e| matches!(e.to_ascii_lowercase().as_str(), "html" | "xhtml" | "htm"))
-            .unwrap_or(false);
-        if !is_html {
+            .map(|e| e.to_ascii_lowercase())
+            .unwrap_or_default();
+        if ext == "svg" {
+            if let Ok(raw) = fs::read(path)
+                && let Ok(content) = std::str::from_utf8(&raw)
+                && svg_doctype_re.is_match(content)
+            {
+                let _ = fs::write(path, svg_doctype_re.replace(content, "").as_bytes());
+            }
+            continue;
+        }
+        if !matches!(ext.as_str(), "html" | "xhtml" | "htm") {
             continue;
         }
 
@@ -217,8 +229,28 @@ pub fn detect_html_syntax(root: &Path) -> Vec<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{detect_html_syntax, slugify_ascii};
+    use super::{detect_html_syntax, slugify_ascii, standardize_xhtml_files};
     use std::fs;
+
+    #[test]
+    fn drops_svg_doctype_unless_it_declares_entities() {
+        let dir = tempfile::tempdir().unwrap();
+        let plain = dir.path().join("a.svg");
+        let subset = dir.path().join("b.svg");
+        fs::write(
+            &plain,
+            "<?xml version=\"1.0\"?>\n<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>",
+        )
+        .unwrap();
+        let with_entities = "<!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"x.dtd\" [<!ENTITY ns \"y\">]>\n<svg/>";
+        fs::write(&subset, with_entities).unwrap();
+        standardize_xhtml_files(dir.path(), &|_| {}).unwrap();
+        assert_eq!(
+            fs::read_to_string(&plain).unwrap(),
+            "<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\"/>"
+        );
+        assert_eq!(fs::read_to_string(&subset).unwrap(), with_entities);
+    }
 
     #[test]
     fn flags_html_syntax_but_not_xhtml() {

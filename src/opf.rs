@@ -353,8 +353,190 @@ fn write_page_break_source_meta<W: std::io::Write>(
     Ok(())
 }
 
+/// The OPF 2 attributes on metadata elements that EPUB 3 expresses as
+/// `<meta refines>` instead (`opf:role`, `opf:file-as`, `opf:scheme`,
+/// `opf:event`). Returns the local name for such an attribute key.
+fn legacy_attr(key: &str) -> Option<&str> {
+    let (prefix, name) = key.split_once(':')?;
+    if matches!(prefix, "xml" | "xmlns" | "xsi") {
+        return None;
+    }
+    matches!(name, "role" | "file-as" | "scheme" | "event").then_some(name)
+}
+
+/// How a `dc:date` survives the move to EPUB 3, which allows exactly one.
+fn date_rank(event: Option<&str>) -> u8 {
+    match event.map(str::trim) {
+        Some("publication" | "original-publication") => 0,
+        None | Some("") => 1,
+        Some("creation") => 2,
+        Some("modification") => 4,
+        Some(_) => 3,
+    }
+}
+
+/// What the EPUB 2 → 3 metadata translation must know before streaming: the
+/// ids already in use, and which `dc:date` (by position) stays a `dc:date`.
+struct LegacyScan {
+    ids: HashSet<String>,
+    primary_date: Option<usize>,
+}
+
+fn scan_legacy(xml: &str) -> Result<LegacyScan> {
+    let doc = crate::util::parse_xml(xml).context("Failed to parse OPF package document")?;
+    let ids = doc
+        .descendants()
+        .filter_map(|n| n.attribute("id"))
+        .map(str::to_string)
+        .collect();
+    let primary_date = doc
+        .descendants()
+        .filter(|n| n.tag_name().namespace() == Some(NS_DC) && n.tag_name().name() == "date")
+        .enumerate()
+        .min_by_key(|(i, n)| {
+            let event = n
+                .attributes()
+                .find(|a| a.name() == "event" && a.namespace().is_some())
+                .map(|a| a.value());
+            (date_rank(event), *i)
+        })
+        .map(|(i, _)| i);
+    Ok(LegacyScan { ids, primary_date })
+}
+
+/// A `<meta>` the translation adds at the end of `<metadata>`.
+struct AddedMeta {
+    refines: Option<String>,
+    property: &'static str,
+    scheme: Option<&'static str>,
+    value: String,
+}
+
+/// Strip the OPF 2 attributes from a metadata element and queue their EPUB 3
+/// `refines` equivalents. Gives the element an id when it needs one.
+fn translate_legacy(
+    e: &BytesStart,
+    ids: &mut HashSet<String>,
+    next_id: &mut usize,
+    added: &mut Vec<AddedMeta>,
+) -> BytesStart<'static> {
+    let is_identifier = local(e.name()) == "identifier";
+    let mut legacy: Vec<(&'static str, String)> = Vec::new();
+    let mut new = BytesStart::new(e.name().as_ref().to_string());
+    let mut id = None;
+    for a in e.attributes().flatten() {
+        let key = a.key.as_ref().to_string();
+        let value = a
+            .normalized_value(XmlVersion::Implicit1_0)
+            .map(|c| c.into_owned())
+            .unwrap_or_else(|_| a.value.to_string());
+        match legacy_attr(&key) {
+            // `opf:event` is handled by the dc:date logic; elsewhere it has no
+            // EPUB 3 form.
+            Some("event") => {}
+            Some("role") => legacy.push(("role", value)),
+            Some("file-as") => legacy.push(("file-as", value)),
+            Some("scheme") if is_identifier => legacy.push(("identifier-type", value)),
+            Some(_) => {}
+            None => {
+                if key == "id" {
+                    id = Some(value.clone());
+                }
+                new.push_attribute((key.as_str(), value.as_str()));
+            }
+        }
+    }
+    legacy.retain(|(_, v)| !v.trim().is_empty());
+    if legacy.is_empty() {
+        return new;
+    }
+    let id = id.unwrap_or_else(|| {
+        loop {
+            *next_id += 1;
+            let candidate = format!("epublift-meta-{next_id}");
+            if ids.insert(candidate.clone()) {
+                new.push_attribute(("id", candidate.as_str()));
+                break candidate;
+            }
+        }
+    });
+    for (property, value) in legacy {
+        let value = value.trim().to_string();
+        let scheme = (property == "role"
+            && value.len() == 3
+            && value.bytes().all(|b| b.is_ascii_lowercase()))
+        .then_some("marc:relators");
+        added.push(AddedMeta {
+            refines: Some(format!("#{id}")),
+            property,
+            scheme,
+            value,
+        });
+    }
+    new
+}
+
+fn write_added_meta<W: std::io::Write>(writer: &mut Writer<W>, m: &AddedMeta) -> Result<()> {
+    writer.write_event(Event::Text(BytesText::from_escaped("\n    ")))?;
+    let mut e = BytesStart::new("meta");
+    if let Some(r) = &m.refines {
+        e.push_attribute(("refines", r.as_str()));
+    }
+    e.push_attribute(("property", m.property));
+    if let Some(s) = m.scheme {
+        e.push_attribute(("scheme", s));
+    }
+    writer.write_event(Event::Start(e))?;
+    writer.write_event(Event::Text(BytesText::new(&m.value)))?;
+    writer.write_event(Event::End(BytesEnd::new("meta")))?;
+    Ok(())
+}
+
+/// The EPUB 3 property for a `dc:date` that cannot stay one, or `None` when
+/// it is dropped (a modification date: `dcterms:modified` replaces it).
+fn secondary_date_property(event: Option<&str>) -> Option<&'static str> {
+    match event.map(str::trim) {
+        Some("modification") => None,
+        Some("creation") => Some("dcterms:created"),
+        Some("publication" | "original-publication") => Some("dcterms:issued"),
+        _ => Some("dcterms:date"),
+    }
+}
+
+/// The `opf:event` of a `dc:date` start tag.
+fn date_event(e: &BytesStart) -> Option<String> {
+    e.attributes().flatten().find_map(|a| {
+        let key = a.key.as_ref().to_string();
+        (legacy_attr(&key) == Some("event")).then(|| a.value.to_string())
+    })
+}
+
+/// Does this metadata element carry an OPF 2 attribute EPUB 3 does not allow?
+fn has_legacy_attr(e: &BytesStart) -> bool {
+    e.attributes()
+        .flatten()
+        .any(|a| legacy_attr(a.key.as_ref()).is_some())
+}
+
+/// A `dc:date` (or other DC element) start tag inside `<metadata>`.
+fn is_dc(e: &BytesStart, name: &str) -> bool {
+    let q = e.name();
+    let q = q.as_ref();
+    local(e.name()) == name && q.contains(':') && !q.starts_with("opf:")
+}
+
 /// Stream the OPF through, applying the EPUB 3.3 upgrades.
 pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
+    let LegacyScan {
+        mut ids,
+        primary_date,
+    } = scan_legacy(xml)?;
+    let mut next_id = 0usize;
+    let mut added: Vec<AddedMeta> = Vec::new();
+    let mut date_index = 0usize;
+    // A secondary dc:date being dropped: its property (None = discard) and text.
+    let mut moving_date: Option<(Option<&'static str>, String)> = None;
+
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(false);
 
@@ -376,6 +558,44 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                 && local(e.name()) == "meta"
             {
                 skip_until_end_meta = false;
+            }
+            continue;
+        }
+
+        // A secondary dc:date: collect its text, then move it to a meta (or
+        // drop it) at its end tag.
+        if let Some((property, text)) = &mut moving_date {
+            match &ev {
+                Event::Text(t) => text.push_str(&t.xml_content(XmlVersion::Implicit1_0)),
+                Event::GeneralRef(r) => {
+                    if let Ok(Some(c)) = r.resolve_char_ref() {
+                        text.push(c);
+                    } else {
+                        let name: &str = r.as_ref();
+                        text.push_str(match name {
+                            "amp" => "&",
+                            "lt" => "<",
+                            "gt" => ">",
+                            "quot" => "\"",
+                            "apos" => "'",
+                            _ => "",
+                        });
+                    }
+                }
+                Event::End(e) if local(e.name()) == "date" => {
+                    if let Some(property) = property
+                        && !text.trim().is_empty()
+                    {
+                        added.push(AddedMeta {
+                            refines: None,
+                            property,
+                            scheme: None,
+                            value: text.trim().to_string(),
+                        });
+                    }
+                    moving_date = None;
+                }
+                _ => {}
             }
             continue;
         }
@@ -433,6 +653,22 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                         let new = rewrite_item(&e, params);
                         writer.write_event(Event::Start(new))?;
                     }
+                    "date" if in_metadata && is_dc(&e, "date") => {
+                        let index = date_index;
+                        date_index += 1;
+                        if Some(index) == primary_date {
+                            let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
+                            writer.write_event(Event::Start(new))?;
+                        } else {
+                            let event = date_event(&e);
+                            moving_date =
+                                Some((secondary_date_property(event.as_deref()), String::new()));
+                        }
+                    }
+                    _ if in_metadata && has_legacy_attr(&e) => {
+                        let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
+                        writer.write_event(Event::Start(new))?;
+                    }
                     _ => writer.write_event(Event::Start(e))?,
                 }
             }
@@ -446,6 +682,18 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                         let new = rewrite_item(&e, params);
                         writer.write_event(Event::Empty(new))?;
                     }
+                    "date" if in_metadata && is_dc(&e, "date") => {
+                        let index = date_index;
+                        date_index += 1;
+                        if Some(index) == primary_date {
+                            let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
+                            writer.write_event(Event::Empty(new))?;
+                        }
+                    }
+                    _ if in_metadata && has_legacy_attr(&e) => {
+                        let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
+                        writer.write_event(Event::Empty(new))?;
+                    }
                     _ => writer.write_event(Event::Empty(e))?,
                 }
             }
@@ -457,6 +705,9 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                         write_modified_meta(&mut writer, &params.modified_ts)?;
                         if let Some(src) = &params.page_break_source {
                             write_page_break_source_meta(&mut writer, src)?;
+                        }
+                        for m in &added {
+                            write_added_meta(&mut writer, m)?;
                         }
                         writer.write_event(Event::Text(BytesText::from_escaped("\n  ")))?;
                         in_metadata = false;
@@ -586,6 +837,72 @@ mod tests {
             remove_guide: false,
             page_break_source: pbs,
         }
+    }
+
+    const OPF_EPUB2: &str = r##"<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="2.0" unique-identifier="uuid_id">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+    <dc:identifier id="uuid_id" opf:scheme="uuid">urn:uuid:1</dc:identifier>
+    <dc:identifier opf:scheme="ISBN">9780000000000</dc:identifier>
+    <dc:title>T</dc:title>
+    <dc:creator opf:role="aut" opf:file-as="Doe, Jane">Jane Doe</dc:creator>
+    <dc:contributor opf:role="Çeviren">A &amp; B</dc:contributor>
+    <dc:date>1999-08-02T21:00:00+00:00</dc:date>
+    <dc:date opf:event="modification">2013-12-06</dc:date>
+    <dc:date opf:event="creation">1990</dc:date>
+    <dc:language>tr</dc:language>
+  </metadata>
+  <manifest><item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></manifest>
+  <spine><itemref idref="c"/></spine>
+</package>"##;
+
+    #[test]
+    fn translates_opf2_metadata_attributes_to_refines() {
+        let out = rewrite_opf(OPF_EPUB2, &params(None)).unwrap();
+        assert!(!out.contains("opf:role") && !out.contains("opf:file-as"));
+        assert!(!out.contains("opf:scheme") && !out.contains("opf:event"));
+        assert!(
+            out.contains(r##"<meta refines="#uuid_id" property="identifier-type">uuid</meta>"##)
+        );
+        assert!(
+            out.contains(r##"<dc:identifier id="epublift-meta-1">9780000000000</dc:identifier>"##)
+        );
+        assert!(out.contains(
+            r##"<meta refines="#epublift-meta-1" property="identifier-type">ISBN</meta>"##
+        ));
+        assert!(out.contains(r##"<dc:creator id="epublift-meta-2">Jane Doe</dc:creator>"##));
+        assert!(out.contains(
+            r##"<meta refines="#epublift-meta-2" property="role" scheme="marc:relators">aut</meta>"##
+        ));
+        assert!(
+            out.contains(
+                r##"<meta refines="#epublift-meta-2" property="file-as">Doe, Jane</meta>"##
+            )
+        );
+        // Not a MARC code: kept as a role, without claiming the scheme.
+        assert!(
+            out.contains(r##"<meta refines="#epublift-meta-3" property="role">Çeviren</meta>"##)
+        );
+        assert!(out.contains("A &amp; B"));
+        // One dc:date stays; the modification date gives way to dcterms:modified.
+        assert_eq!(out.matches("<dc:date").count(), 1);
+        assert!(out.contains("<dc:date>1999-08-02T21:00:00+00:00</dc:date>"));
+        assert!(!out.contains("2013-12-06"));
+        assert!(out.contains(r##"<meta property="dcterms:created">1990</meta>"##));
+        crate::util::parse_xml(&out).unwrap();
+    }
+
+    #[test]
+    fn a_publication_date_wins_over_an_undated_one() {
+        let opf = OPF_EPUB2.replace(
+            r##"<dc:date opf:event="creation">1990</dc:date>"##,
+            r##"<dc:date opf:event="publication">2001</dc:date>"##,
+        );
+        let out = rewrite_opf(&opf, &params(None)).unwrap();
+        assert!(out.contains("<dc:date>2001</dc:date>"));
+        assert!(
+            out.contains(r##"<meta property="dcterms:date">1999-08-02T21:00:00+00:00</meta>"##)
+        );
     }
 
     #[test]
