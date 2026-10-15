@@ -496,6 +496,12 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
         .clone()
         .unwrap_or_else(|| default_output_path(&input_path, options));
 
+    if options.kepub && matches!(options.packaging, Packaging::Zstd { .. }) {
+        bail!(
+            "--kepub cannot be combined with Zstandard packaging: Kobo reads only a conformant EPUB."
+        );
+    }
+
     let quality = options.quality.clamp(1, 100);
     let original_size = fs::metadata(&input_path)?.len();
 
@@ -637,17 +643,17 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
     let new_opf = opf::rewrite_opf(&opf_xml, &params)?;
     fs::write(&opf_path, new_opf)?;
 
-    // Step 4b: Inject Kobo koboSpan markup when targeting .kepub.
-    if options.kepub {
-        progress("[*] Injecting Kobo koboSpan markup (.kepub)...");
-        kepub::kobo_spanify(temp_path, &progress)?;
-    }
-
     // Step 5: Repackage EPUB.
     match options.packaging {
         Packaging::Deflate => {
             progress("[*] Repackaging folder into EPUB file...");
             repackage_epub(temp_path, &output_path)?;
+            // Step 5b: Kobo koboSpan markup when targeting .kepub (kepubverto
+            // works on the packaged book).
+            if options.kepub {
+                progress("[*] Adding Kobo koboSpan markup (.kepub)...");
+                kepub::kobo_spanify(&output_path, &progress)?;
+            }
         }
         Packaging::Zstd { mode, level } => {
             #[cfg(feature = "zstd-experimental")]

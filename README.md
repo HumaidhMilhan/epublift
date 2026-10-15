@@ -23,7 +23,7 @@ ePubLift began as a Rust port of an earlier Python implementation but has since 
     *   Allows customizable quality level settings (1–100).
     *   Automatically scans and updates all image references in CSS, XHTML/HTML files, SVG graphics, and the OPF manifest.
     *   Readers that don't render WebP (notably **Kobo e-ink**) show WebP images blank, which is why WebP is opt-in. `--keep-images`, the old way to ask for the default, still works.
-*   **📖 Kobo `.kepub` output (`--kepub`)**: Injects Kobo's `koboSpan` markup (à la [`kepubify`](https://github.com/pgaskin/kepubify)) to unlock faster page turns, reading statistics, and dictionary lookup on Kobo devices, naming the file `<name>.kepub.epub`. Still a valid EPUB 3, and keeps original images (Kobo can't render WebP).
+*   **📖 Kobo `.kepub` output (`--kepub`)**: Injects Kobo's `koboSpan` markup with [kepubverto](https://github.com/veripublica/kepubverto) (span ids as [`kepubify`](https://github.com/pgaskin/kepubify)'s) to unlock faster page turns, reading statistics, and dictionary lookup on Kobo devices, naming the file `<name>.kepub.epub`. Still a valid EPUB 3, and keeps original images (Kobo can't render WebP).
 *   **🛡️ Size-Safe by Design** — re-encoding never makes a book bigger:
     *   **Keeps the smaller file.** If the WebP isn't actually smaller than the source, the original image is kept untouched, so the output can never grow.
     *   **Never upscales quality.** For a JPEG source the WebP quality is capped at the source's own (estimated) quality — a low-quality chart isn't re-encoded at a higher quality, which would only add bytes, not detail.

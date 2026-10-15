@@ -111,6 +111,11 @@ epubveri = "0.28.0"
 # a book repaired here and there comes back identical. Pure Rust, on the same
 # epubveri, zip 8 and roxmltree 0.21 as we are. See docs/repair.md.
 epubsana = "0.28.0"
+# kepubverto, the family's KEPUB converter: `--kepub` and the web's .kepub run
+# its `convert()` on the packaged book, so the Kobo markup is exactly what
+# `kepubverto` writes. Pure Rust, on the same epubveri, zip 8 and
+# roxmltree 0.21.
+kepubverto = "0.2.0"
 # `--format json` on `check` and `repair`: the shared veripublica envelope.
 # epubsana already links it, so it costs the default build nothing.
 serde_json = "1"

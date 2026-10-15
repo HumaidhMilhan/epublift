@@ -38,7 +38,7 @@ impl From<ZstdModeArg> for epublift::ZstdMode {
     }
 }
 
-/// Optimize EPUB structure to 3.3 and convert images to WebP.
+/// Upgrade an EPUB to 3.3, keeping its images as they are (--webp re-encodes them).
 ///
 /// With no subcommand, `epublift -i book.epub` runs the optimizer (the original,
 /// backwards-compatible behavior). The `archive` / `restore` subcommands manage
@@ -70,7 +70,7 @@ struct Args {
     #[arg(short, long, default_value_t = 80)]
     quality: i32,
 
-    /// Path to write the summary size report (optional)
+    /// Path to write the summary size report [default: <input>_report.txt beside the output]
     #[arg(short, long)]
     report: Option<PathBuf>,
 
@@ -1424,7 +1424,12 @@ fn run_convert(args: Args) -> Result<()> {
         .unwrap_or_else(|| epublift::default_output_path(&input, &options));
     options.output = Some(output_path.clone());
 
-    let parent = input.parent().unwrap_or_else(|| Path::new("."));
+    // The report goes beside the output, so a run with `-o` never writes into
+    // the input's (possibly read-only, shared) directory.
+    let parent = output_path
+        .parent()
+        .filter(|p| !p.as_os_str().is_empty())
+        .unwrap_or_else(|| Path::new("."));
     let report_path = match args.report {
         Some(p) => p,
         None => parent.join(format!(
@@ -1455,12 +1460,21 @@ fn run_convert(args: Args) -> Result<()> {
     println!("\n[+] Optimization complete!");
     println!("[+] Output EPUB: {}", report.output_path.display());
     println!("[+] Report file: {}", report_path.display());
-    println!(
-        "[+] Size reduced from {:.2} MB to {:.2} MB ({:.1}% savings)",
+    let (before, after) = (
         report.original_size as f64 / 1024.0 / 1024.0,
         report.final_size as f64 / 1024.0 / 1024.0,
-        report.percent_saved()
     );
+    if report.final_size > report.original_size {
+        println!(
+            "[+] Size grew from {before:.2} MB to {after:.2} MB (+{:.1}%)",
+            -report.percent_saved()
+        );
+    } else {
+        println!(
+            "[+] Size reduced from {before:.2} MB to {after:.2} MB ({:.1}% savings)",
+            report.percent_saved()
+        );
+    }
 
     Ok(())
 }

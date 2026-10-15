@@ -935,6 +935,7 @@ dependencies = [
  "epubveri",
  "image",
  "imgref",
+ "kepubverto",
  "lopdf",
  "ocrs",
  "percent-encoding",
@@ -1520,6 +1521,19 @@ checksum = "f88c8baa7c73e9a4f7fdd58b9d996f2fef793416b4ea099f16adbe9b454e39f6"
 dependencies = [
  "archmage",
  "magetypes",
+]
+
+[[package]]
+name = "kepubverto"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53566cc539a11a99fffe2c097633b63e3f3c485947928024d4f4f3ec18206d36"
+dependencies = [
+ "epubveri",
+ "roxmltree",
+ "serde",
+ "serde_json",
+ "zip",
 ]
 
 [[package]]

@@ -88,7 +88,7 @@ epublift -i book.epub -o optimized_book.epub -q 85 -r stats_report.txt
 | `-i` | `--input` | **[Required]** Path to the original EPUB file | *None* |
 | `-o` | `--output` | Path to save the modernized EPUB | `<input>_v3.3.epub` |
 | `-q` | `--quality`| Image quality (1-100) when images are re-encoded (`--webp`, `--target 3.4`) | `80` |
-| `-r` | `--report` | Path to write the conversion audit report | `<input>_report.txt` |
+| `-r` | `--report` | Path to write the conversion audit report | `<input>_report.txt`, beside the output |
 | | `--ascii` | Transliterate the auto-generated output/report names to ASCII | *off* |
 | | `--webp` | Re-encode JPEG/PNG images to WebP (size-safe: only when smaller) | *off* |
 | | `--keep-images` | Keep original images. The default; kept so existing scripts work, and it overrides `--target 3.4`'s image conversion | *on* |
@@ -176,7 +176,7 @@ epublift -i book.epub --kepub
 # → book_v3.3.kepub.epub
 ```
 
-The result is still a valid EPUB 3 (Kobo simply keys on the `.kepub.epub` extension and the spans), so the same file also opens in other readers. The transform follows the approach of the open-source [`kepubify`](https://github.com/pgaskin/kepubify): sentence-level spans, each image in its own paragraph, and Kobo's column scaffolding. Sideload the `.kepub.epub` onto your Kobo (into the `.kobo` folder or via Calibre) to use it.
+The result is still a valid EPUB 3 (Kobo simply keys on the `.kepub.epub` extension and the spans), so the same file also opens in other readers. The markup is added by the family's [kepubverto](https://github.com/veripublica/kepubverto), with the same span ids as the open-source [`kepubify`](https://github.com/pgaskin/kepubify) (so reading positions and highlights survive a switch): sentence-level spans, each image in its own paragraph, and Kobo's column scaffolding. kepubverto inserts its markup without re-serializing the document, so every other byte stays as it was. A document it cannot convert (not UTF-8, not well-formed) is left as it was, with a warning. `--kepub` cannot be combined with the experimental Zstandard packaging. Sideload the `.kepub.epub` onto your Kobo (into the `.kobo` folder or via Calibre) to use it.
 
 ### ASCII-safe filenames (`--ascii`)
 

@@ -493,7 +493,11 @@ fn kepub_injects_kobospans_and_names_output() {
         chapter.contains("id=\"book-inner\"") && chapter.contains("id=\"book-columns\""),
         "body wrapped in Kobo column scaffolding"
     );
-    assert!(chapter.contains("kobostylehacks"), "Kobo style hack added");
+    // EPUB 3: a marker class and no obsolete `type` (kepubverto 0.1.1's fix).
+    assert!(
+        chapter.contains("<style class=\"kobostylehacks\">"),
+        "Kobo style hack added, valid for EPUB 3"
+    );
     // Kobo can't render WebP, so .kepub forces keep-original images: the cover
     // stays a JPEG and is NOT converted to WebP.
     assert!(
@@ -791,4 +795,34 @@ fn hostile_nesting_is_declined_not_a_crash() {
         panic!("read_metadata accepted a 20,000-level OPF");
     };
     assert!(format!("{err:#}").contains("nesting"), "got: {err:#}");
+}
+
+#[test]
+fn report_goes_beside_the_output() {
+    // A run with `-o` must not write into the input's directory, which may be a
+    // read-only shared shelf: the default report follows the output.
+    let dir = tempfile::tempdir().unwrap();
+    let shelf = dir.path().join("shelf");
+    let out_dir = dir.path().join("out");
+    std::fs::create_dir_all(&shelf).unwrap();
+    std::fs::create_dir_all(&out_dir).unwrap();
+    let input = shelf.join("legacy.epub");
+    build_epub(&input, &legacy_text_only());
+
+    let status = std::process::Command::new(env!("CARGO_BIN_EXE_epublift"))
+        .arg("-i")
+        .arg(&input)
+        .arg("-o")
+        .arg(out_dir.join("legacy.epub"))
+        .output()
+        .unwrap()
+        .status;
+    assert!(status.success());
+    assert!(out_dir.join("legacy_report.txt").is_file());
+    let mut left: Vec<_> = std::fs::read_dir(&shelf)
+        .unwrap()
+        .map(|e| e.unwrap().file_name())
+        .collect();
+    left.sort();
+    assert_eq!(left, ["legacy.epub"], "nothing new beside the input");
 }

@@ -40,12 +40,28 @@ are tagged with the component they belong to.
   findings, statuses and exit codes on every book; 14 books gain repair
   proposals (109 in all). The browser validator gives the
   same counts as the CLI on all 562.
+- **`--kepub` and the web's .kepub output run kepubverto 0.2.0**, the
+  family's KEPUB converter, in place of epublift's own transform. The span
+  ids are kepubify's, as before, but kepubverto inserts its markup without
+  re-serializing the document, so every other byte stays as it was, and its
+  Kobo style element is valid. Measured on 562 books, graded by epubveri
+  0.28.0 against the same conversion without `--kepub`: the old transform
+  added findings to every book (4,686 `RSC-005` errors, 22,128 `RSC-036`
+  usage notes); kepubverto adds none. `--kepub` with the experimental
+  Zstandard packaging is now refused (Kobo reads only a conformant EPUB).
+- **cli (breaking): the default report goes beside the output**, not beside
+  the input. With `-o elsewhere/`, a run no longer writes
+  `<input>_report.txt` into the input's directory, which may be read-only or
+  shared. Without `-o` nothing changes; `-r/--report` still sets the path.
 - **The `gen-sample` test-book binary needs the `gen-sample` feature**
   (`cargo run --features gen-sample --bin gen-sample`), so installing the
   crate installs `epublift` alone. The package sent to crates.io holds only
   the code, README, LICENSE and CHANGELOG.
 
 ### Fixed
+- **A conversion that makes the book larger says so**: "Size grew from 0.86
+  MB to 0.92 MB (+6.7%)" instead of "Size reduced … (-6.7% savings)". The
+  first line of `--help` no longer says images are converted to WebP.
 - **`-V` no longer says `.dirty` for a clean `cargo install --git` build**
   (Cargo's untracked `.cargo-ok` marker counted as a change), and takes no
   hash from a repository the crate merely sits inside.
