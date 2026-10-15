@@ -34,6 +34,8 @@ ePubLift began as a Rust port of an earlier Python implementation but has since 
     *   Parses legacy `toc.ncx` maps and generates a standard **EPUB 3 Navigation Document (`nav.xhtml`)** with clean nested elements.
     *   Converts outdated `<guide>` landmark reference lists into HTML5 `<nav epub:type="landmarks">` maps.
     *   Standardizes legacy XHTML DOCTYPEs (like XHTML 1.1) to modern HTML5 `<!DOCTYPE html>` structure.
+    *   Translates EPUB 2 metadata (`opf:role`, `opf:file-as`, `opf:scheme`, several `dc:date`s) into EPUB 3 `<meta refines>` form.
+    *   Finishes with [**epubsana**](https://github.com/veripublica/epubsana)'s EPUB 3 fixes (named entities such as `&nbsp;`, the manifest's `svg` property, empty `<title>`s), so a book that was valid in EPUB 2 stays valid in EPUB 3.
 *   **📦 Archive your library (`.eparc`)**: `epublift archive` shrinks EPUB(s) into compact, **lossless** `.eparc` archives to save disk space; `epublift restore` brings any book back — content-exact by default, or re-targeted for a specific reader (`--target 3.3`, `--webp`, `--kepub`). Pure-Rust solid Zstandard on text + fonts, media stored verbatim, so it never grows a book. See [Archive your library](#-archive-your-library-eparc).
 *   **🏷️ Fix book metadata (`meta`)**: Read, hand-edit, or **auto-fill** a book's metadata by ISBN from **Open Library** or **Google Books** — `epublift meta show` / `set` / `enrich`. **Language-aware**: fields are filled only in the book's own language. The lookup uses a **100% pure-Rust** HTTPS client (rustls + RustCrypto — no C), behind the opt-in `metadata` build feature. See the [Metadata guide](docs/metadata.md).
 *   **📄 Import a PDF (`import`, experimental)**: Turn a PDF into a **reflowable** EPUB — `epublift import -i book.pdf`. Works for PDFs that carry a text layer (born-digital books and already-searchable scans), including modern **Type0/CID** fonts, with accurate word spacing from the font's real glyph widths (matched a publisher's own EPUB at ~99.8% word overlap in testing). Carries figures over too. Scanned-only PDFs (no text layer) are handled by **OCR** (pure-Rust ocrs + rten, models download on first use) behind the heavier opt-in `pdf-ocr` feature — best-effort (~92% on clean prose scans). 100% pure-Rust. See the [PDF import guide](docs/pdf-import.md).
@@ -54,11 +56,12 @@ graph TD
     D -->|Convert JPEG/PNG to WebP| E[Compress & Optimize Images]
     E -->|Href Remapping| F[Update Links in XHTML, CSS, SVGs & Manifest]
     F -->|Structure Modernization| G[Upgrade OPF version to 3.0]
-    G --> H[Inject dc/dcterms namespaces & UTC modified time]
+    G --> H[Translate EPUB 2 metadata, inject UTC modified time]
     H --> I[Parse toc.ncx and generate nav.xhtml]
     I --> J[Clean & Standardize DOCTYPEs to HTML5]
     J -->|Repackage ZIP| K[Store mimetype Uncompressed & Deflate others]
-    K --> L[Generate Clean EPUB 3.3 Output]
+    K --> K2[EPUB 3 fixes with epubsana]
+    K2 --> L[Generate Clean EPUB 3.3 Output]
     L --> M[Write Performance & Compliance Audit Report]
 ```
 

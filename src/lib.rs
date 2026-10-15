@@ -38,6 +38,7 @@ mod nav;
 mod opf;
 #[cfg(feature = "pdf")]
 pub mod pdf;
+mod upgrade_fixes;
 // AI "Smart Import": cloud OCR (PDF → Markdown) feeding the offline Markdown core.
 mod report;
 #[cfg(feature = "smart-import")]
@@ -648,6 +649,9 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
         Packaging::Deflate => {
             progress("[*] Repackaging folder into EPUB file...");
             repackage_epub(temp_path, &output_path)?;
+            // Step 5a: what EPUB 3 requires of a book EPUB 2 accepted, by epubsana.
+            progress("[*] Applying EPUB 3 fixes (epubsana)...");
+            upgrade_fixes::apply(&output_path, &progress)?;
             // Step 5b: Kobo koboSpan markup when targeting .kepub (kepubverto
             // works on the packaged book).
             if options.kepub {

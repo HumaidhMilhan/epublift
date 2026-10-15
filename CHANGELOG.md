@@ -66,6 +66,17 @@ are tagged with the component they belong to.
   stays (publication first); a modification date gives way to
   `dcterms:modified`, a creation date becomes `dcterms:created`. On 562
   books this removed every `opf:*` error the upgrade used to add (476 books).
+- **The upgrade finishes with epubsana's EPUB 3 fixes**, run on the packaged
+  book (CLI and web Optimize). Its safe fixes are applied — named entities
+  such as `&nbsp;` become the characters they stand for (the new DOCTYPE
+  declares none), inline SVG gets the manifest's `svg` property — and three
+  fixes that EPUB 3 requires of a book EPUB 2 accepted: an empty `<title>`
+  filled from the book's table of contents, heading or title, the
+  `Content-Type` meta spelled as EPUB 3 wants it, an empty metadata element
+  dropped. Other fixes that need a decision are left to `epublift repair`.
+  Measured on 562 books (epubveri 0.28.0): of 252 valid inputs, 245 come out
+  valid (54 before this release's upgrade fixes); 40 invalid inputs come out
+  valid.
 - **An SVG 1.1 DOCTYPE is dropped on upgrade** (`OPF-073`: EPUB 3 allows no
   external identifier on SVG), unless it declares entities the file needs.
 - **A conversion that makes the book larger says so**: "Size grew from 0.86
