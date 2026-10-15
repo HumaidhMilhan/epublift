@@ -73,7 +73,7 @@ To see what a running instance is, ask it — the page footer shows the same
 
 ```bash
 curl -s http://127.0.0.1:8080/version
-# {"version":"1.24.0","engine":"3.3.0","epubveri":"0.26.0","commit":"…"}
+# {"version":"1.24.0","engine":"3.3.0","epubveri":"0.28.0","commit":"…"}
 ```
 
 `version` is the web release; `engine` is the epublift library it runs — the

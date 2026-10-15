@@ -25,17 +25,21 @@ are tagged with the component they belong to.
   Repair, Metadata, Optimize, then Archive, Restore, Import, Smart. The page
   opens on Validate, and the opening text (13 languages) tells that order:
   check, repair where a fix is certain, complete the metadata, modernize.
-- **`epublift check` and the web Validate mode run epubveri 0.26.0;
-  `epublift repair` and the web Repair mode run epubsana 0.26.0.** epubveri
+- **`epublift check` and the web Validate mode run epubveri 0.28.0;
+  `epublift repair` and the web Repair mode run epubsana 0.28.0.** epubveri
   checks `<style>`, `<script>`, `<meta>` and `<base>` in EPUB 2 against
-  XHTML 1.1's attribute lists, and names the rule and the element path on
-  SVG attribute findings. epubsana adds two safe fixes, applied without
-  asking: SVG attribute names back to their camelCase (`viewbox` →
-  `viewBox`), and `dir="LTR"`/`"RTL"` lowercased. Measured on 544 books
-  against the build before it: the same findings, statuses and exit codes
-  on every book; 3 books gain a repair (8, 4 and 2 fewer errors, none
-  added), and the other 66 repaired files are byte-identical. The browser validator
-  gives the same counts as the CLI on all 544.
+  XHTML 1.1's attribute lists, grades the encoding of every XML file, checks
+  MathML attribute names per element (`<mi title>` is now `RSC-005`, as in
+  epubcheck) and names the rule and the element path on SVG findings.
+  epubsana adds safe fixes, applied without asking: SVG attribute and
+  element names back to their camelCase (`viewbox` → `viewBox`,
+  `lineargradient` → `linearGradient`), and `dir="LTR"`/`"RTL"` lowercased.
+  It now asks before giving a document with no `<title>` one, before giving
+  an NCX `navPoint` with no `id` one, and an empty title falls back to the
+  book's title. Measured on 562 books, 0.26.0 against 0.28.0: the same
+  findings, statuses and exit codes on every book; 14 books gain repair
+  proposals (109 in all). The browser validator gives the
+  same counts as the CLI on all 562.
 - **The `gen-sample` test-book binary needs the `gen-sample` feature**
   (`cargo run --features gen-sample --bin gen-sample`), so installing the
   crate installs `epublift` alone. The package sent to crates.io holds only
