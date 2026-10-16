@@ -375,6 +375,27 @@ fn date_rank(event: Option<&str>) -> u8 {
     }
 }
 
+/// A metadata element with OPF 2 attributes, held back until its end tag shows
+/// whether it is empty.
+struct HeldElement {
+    start: BytesStart<'static>,
+    inner: Vec<Event<'static>>,
+    depth: usize,
+}
+
+impl HeldElement {
+    /// Empty as XML counts it: no content but XML whitespace (a no-break
+    /// space or a character reference is content).
+    fn is_blank(&self) -> bool {
+        self.inner.iter().all(|e| match e {
+            Event::Text(t) => t.chars().all(|c| matches!(c, ' ' | '\t' | '\r' | '\n')),
+            Event::CData(c) => c.chars().all(|c| matches!(c, ' ' | '\t' | '\r' | '\n')),
+            Event::GeneralRef(_) => false,
+            _ => true,
+        })
+    }
+}
+
 /// What the EPUB 2 → 3 metadata translation must know before streaming: the
 /// ids already in use, and which `dc:date` (by position) stays a `dc:date`.
 struct LegacyScan {
@@ -413,9 +434,12 @@ struct AddedMeta {
 }
 
 /// Strip the OPF 2 attributes from a metadata element and queue their EPUB 3
-/// `refines` equivalents. Gives the element an id when it needs one.
+/// `refines` equivalents. Gives the element an id when it needs one. An empty
+/// element (`blank`) only loses the attributes: a refinement would describe
+/// nothing, and would keep epubsana from dropping the element.
 fn translate_legacy(
     e: &BytesStart,
+    blank: bool,
     ids: &mut HashSet<String>,
     next_id: &mut usize,
     added: &mut Vec<AddedMeta>,
@@ -447,7 +471,7 @@ fn translate_legacy(
         }
     }
     legacy.retain(|(_, v)| !v.trim().is_empty());
-    if legacy.is_empty() {
+    if blank || legacy.is_empty() {
         return new;
     }
     let id = id.unwrap_or_else(|| {
@@ -536,6 +560,7 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
     let mut date_index = 0usize;
     // A secondary dc:date being dropped: its property (None = discard) and text.
     let mut moving_date: Option<(Option<&'static str>, String)> = None;
+    let mut held: Option<HeldElement> = None;
 
     let mut reader = Reader::from_str(xml);
     reader.config_mut().trim_text(false);
@@ -600,6 +625,35 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
             continue;
         }
 
+        // A held metadata element: collect its content, then translate it at
+        // its end tag, knowing whether it is empty.
+        if let Some(h) = &mut held {
+            match &ev {
+                Event::Start(_) => h.depth += 1,
+                Event::End(_) if h.depth > 0 => h.depth -= 1,
+                Event::Eof => anyhow::bail!("OPF package document ends inside <metadata>"),
+                Event::End(_) => {
+                    let h = held.take().expect("held element");
+                    let new = translate_legacy(
+                        &h.start,
+                        h.is_blank(),
+                        &mut ids,
+                        &mut next_id,
+                        &mut added,
+                    );
+                    writer.write_event(Event::Start(new))?;
+                    for e in h.inner {
+                        writer.write_event(e)?;
+                    }
+                    writer.write_event(ev)?;
+                    continue;
+                }
+                _ => {}
+            }
+            h.inner.push(ev.into_owned());
+            continue;
+        }
+
         // Drop the legacy <guide> subtree entirely.
         if skipping_guide {
             match &ev {
@@ -657,8 +711,11 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                         let index = date_index;
                         date_index += 1;
                         if Some(index) == primary_date {
-                            let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
-                            writer.write_event(Event::Start(new))?;
+                            held = Some(HeldElement {
+                                start: e.into_owned(),
+                                inner: Vec::new(),
+                                depth: 0,
+                            });
                         } else {
                             let event = date_event(&e);
                             moving_date =
@@ -666,8 +723,11 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                         }
                     }
                     _ if in_metadata && has_legacy_attr(&e) => {
-                        let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
-                        writer.write_event(Event::Start(new))?;
+                        held = Some(HeldElement {
+                            start: e.into_owned(),
+                            inner: Vec::new(),
+                            depth: 0,
+                        });
                     }
                     _ => writer.write_event(Event::Start(e))?,
                 }
@@ -686,12 +746,13 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                         let index = date_index;
                         date_index += 1;
                         if Some(index) == primary_date {
-                            let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
+                            let new =
+                                translate_legacy(&e, true, &mut ids, &mut next_id, &mut added);
                             writer.write_event(Event::Empty(new))?;
                         }
                     }
                     _ if in_metadata && has_legacy_attr(&e) => {
-                        let new = translate_legacy(&e, &mut ids, &mut next_id, &mut added);
+                        let new = translate_legacy(&e, true, &mut ids, &mut next_id, &mut added);
                         writer.write_event(Event::Empty(new))?;
                     }
                     _ => writer.write_event(Event::Empty(e))?,
@@ -889,6 +950,28 @@ mod tests {
         assert!(out.contains("<dc:date>1999-08-02T21:00:00+00:00</dc:date>"));
         assert!(!out.contains("2013-12-06"));
         assert!(out.contains(r##"<meta property="dcterms:created">1990</meta>"##));
+        crate::util::parse_xml(&out).unwrap();
+    }
+
+    #[test]
+    fn an_empty_element_loses_its_opf2_attributes_without_a_refinement() {
+        let opf = OPF_EPUB2
+            .replace(
+                r##"<dc:identifier id="uuid_id" opf:scheme="uuid">urn:uuid:1</dc:identifier>"##,
+                r##"<dc:identifier id="uuid_id" opf:scheme="uuid"/>
+    <dc:identifier opf:scheme="UUID">urn:uuid:1</dc:identifier>"##,
+            )
+            .replace(
+                r##"<dc:contributor opf:role="Çeviren">A &amp; B</dc:contributor>"##,
+                r##"<dc:contributor opf:role="trl" opf:file-as="X"> </dc:contributor>"##,
+            );
+        let out = rewrite_opf(&opf, &params(None)).unwrap();
+        assert!(out.contains(r##"<dc:identifier id="uuid_id"/>"##));
+        assert!(!out.contains(r##"refines="#uuid_id""##));
+        assert!(out.contains("<dc:contributor> </dc:contributor>"));
+        assert!(!out.contains(">trl<") && !out.contains(">X<"));
+        // A non-empty sibling is still translated.
+        assert!(out.contains(r##"property="identifier-type">UUID</meta>"##));
         crate::util::parse_xml(&out).unwrap();
     }
 

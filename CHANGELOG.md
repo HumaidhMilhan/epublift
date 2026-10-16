@@ -26,7 +26,7 @@ are tagged with the component they belong to.
   opens on Validate, and the opening text (13 languages) tells that order:
   check, repair where a fix is certain, complete the metadata, modernize.
 - **`epublift check` and the web Validate mode run epubveri 0.28.0;
-  `epublift repair` and the web Repair mode run epubsana 0.28.0.** epubveri
+  `epublift repair` and the web Repair mode run epubsana 0.29.0.** epubveri
   checks `<style>`, `<script>`, `<meta>` and `<base>` in EPUB 2 against
   XHTML 1.1's attribute lists, grades the encoding of every XML file, checks
   MathML attribute names per element (`<mi title>` is now `RSC-005`, as in
@@ -36,7 +36,9 @@ are tagged with the component they belong to.
   `lineargradient` → `linearGradient`), and `dir="LTR"`/`"RTL"` lowercased.
   It now asks before giving a document with no `<title>` one, before giving
   an NCX `navPoint` with no `id` one, and an empty title falls back to the
-  book's title. Measured on 562 books, 0.26.0 against 0.28.0: the same
+  book's title. epubsana 0.29.0 drops an empty optional metadata element
+  in an EPUB 3 package too, where it is an error, not only in EPUB 2.
+  Measured on 562 books, 0.26.0 against 0.28.0: the same
   findings, statuses and exit codes on every book; 14 books gain repair
   proposals (109 in all). The browser validator gives the
   same counts as the CLI on all 562.
@@ -59,6 +61,14 @@ are tagged with the component they belong to.
   the code, README, LICENSE and CHANGELOG.
 
 ### Fixed
+- **The navigation document generated from `toc.ncx` escapes its text.** A
+  label such as `A &amp; B` was written back as a bare `&`, which made
+  `nav.xhtml`, and so the whole book, invalid (`RSC-016`, fatal). Titles,
+  link targets and landmark labels are escaped now.
+- **An empty metadata element gets no EPUB 3 refinement.** The upgrade
+  translated `opf:scheme` or `opf:role` on an empty element into a
+  `<meta refines>` describing nothing, which also kept epubsana from
+  dropping the element.
 - **The upgrade translates EPUB 2 metadata to EPUB 3** instead of carrying
   attributes EPUB 3 forbids. `opf:role`, `opf:file-as` and an identifier's
   `opf:scheme` become `<meta refines>` (`role`, with `scheme="marc:relators"`
@@ -74,9 +84,9 @@ are tagged with the component they belong to.
   filled from the book's table of contents, heading or title, the
   `Content-Type` meta spelled as EPUB 3 wants it, an empty metadata element
   dropped. Other fixes that need a decision are left to `epublift repair`.
-  Measured on 562 books (epubveri 0.28.0): of 252 valid inputs, 245 come out
-  valid (54 before this release's upgrade fixes); 40 invalid inputs come out
-  valid.
+  Measured on 562 books (epubveri 0.28.0, epubsana 0.29.0): of 252 valid
+  inputs, 249 come out valid (54 before this release's upgrade fixes); 44
+  invalid inputs come out valid.
 - **An SVG 1.1 DOCTYPE is dropped on upgrade** (`OPF-073`: EPUB 3 allows no
   external identifier on SVG), unless it declares entities the file needs.
 - **A conversion that makes the book larger says so**: "Size grew from 0.86

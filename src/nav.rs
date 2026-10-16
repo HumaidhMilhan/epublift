@@ -3,6 +3,7 @@
 
 use crate::opf::GuideRef;
 use anyhow::{Context, Result};
+use quick_xml::escape::escape;
 use regex::Regex;
 use std::fs;
 use std::path::Path;
@@ -39,6 +40,7 @@ pub fn generate_nav_xhtml(ncx_path: &Path, out_path: &Path, guide_refs: &[GuideR
         .map(|s| s.to_string())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "Table of Contents".to_string());
+    let title_text = escape(&title_text);
 
     // Navigation tree.
     let toc_items = doc
@@ -85,7 +87,9 @@ pub fn generate_nav_xhtml(ncx_path: &Path, out_path: &Path, guide_refs: &[GuideR
             let mapped = map_landmark_type(&r.ref_type);
             out.push(format!(
                 "      <li><a epub:type=\"{}\" href=\"{}\">{}</a></li>",
-                mapped, href, r.title
+                escape(&mapped),
+                escape(&href),
+                escape(&r.title)
             ));
         }
         out.push("    </ol>".to_string());
@@ -143,11 +147,17 @@ fn render_ol(items: &[NavPoint], level: usize, out: &mut Vec<String>) {
         let href = item.href.replace('\\', "/");
         out.push(format!("{}  <li>", indent));
         if href.is_empty() {
-            out.push(format!("{}    <span>{}</span>", indent, item.title));
+            out.push(format!(
+                "{}    <span>{}</span>",
+                indent,
+                escape(&item.title)
+            ));
         } else {
             out.push(format!(
                 "{}    <a href=\"{}\">{}</a>",
-                indent, href, item.title
+                indent,
+                escape(&href),
+                escape(&item.title)
             ));
         }
         if !item.children.is_empty() {
@@ -169,4 +179,36 @@ fn map_landmark_type(ref_type: &str) -> String {
         other => other,
     }
     .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn labels_and_hrefs_are_escaped() {
+        let dir = tempfile::tempdir().unwrap();
+        let ncx = dir.path().join("toc.ncx");
+        fs::write(
+            &ncx,
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+<head/><docTitle><text>Tom &amp; Jerry</text></docTitle>
+<navMap><navPoint id="n1" playOrder="1"><navLabel><text>Yazar &amp; &lt;Çevirmen&gt;</text></navLabel>
+<content src="a.xhtml?x=1&amp;y=2"/></navPoint></navMap></ncx>"#,
+        )
+        .unwrap();
+        let guide = [GuideRef {
+            ref_type: "text".into(),
+            href: "a.xhtml".into(),
+            title: "Start & go".into(),
+        }];
+        let out = dir.path().join("nav.xhtml");
+        generate_nav_xhtml(&ncx, &out, &guide).unwrap();
+        let nav = fs::read_to_string(&out).unwrap();
+        assert!(nav.contains("<title>Tom &amp; Jerry</title>"));
+        assert!(nav.contains(r#"<a href="a.xhtml?x=1&amp;y=2">Yazar &amp; &lt;Çevirmen&gt;</a>"#));
+        assert!(nav.contains(">Start &amp; go</a>"));
+        crate::util::parse_xml(&strip_doctype(&nav)).unwrap();
+    }
 }
