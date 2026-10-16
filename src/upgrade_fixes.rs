@@ -20,11 +20,13 @@ use std::path::Path;
 /// The fixes needing a decision that the upgrade applies without asking
 /// (decided 2026-10-16): an empty `<title>` filled from the book's own table
 /// of contents, heading or title; the `Content-Type` meta spelled as EPUB 3
-/// requires; an empty optional metadata element dropped.
+/// requires; an empty optional metadata element dropped; an XHTML file
+/// labelled `text/html` declared as `application/xhtml+xml`.
 const UPGRADE_FIXES: &[&str] = &[
     "fix.empty_title",
     "fix.content_type_meta",
     "fix.empty_metadata_element",
+    "fix.html_media_type",
 ];
 
 /// A pass that changed the book is followed by another, at most this many in

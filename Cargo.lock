@@ -920,7 +920,7 @@ checksum = "f8e1bd41ecce82c300d0c84fa35b080fa6db50a5398b18f1abf0357bb067549e"
 
 [[package]]
 name = "epublift"
-version = "4.0.0"
+version = "4.1.0"
 dependencies = [
  "almost-enough",
  "any_ascii",
@@ -965,7 +965,7 @@ dependencies = [
 
 [[package]]
 name = "epublift-web"
-version = "1.25.0"
+version = "1.26.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -986,9 +986,9 @@ dependencies = [
 
 [[package]]
 name = "epubsana"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e48efe47e1fe0582164cf083cd1c5d11d45c2da2980341b3668c0485729ac280"
+checksum = "f73fad57cdffde50eb312be143139d900e1cdbf9cc9662ec4b91a0939b40ac75"
 dependencies = [
  "epubveri",
  "roxmltree",
@@ -2976,7 +2976,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",

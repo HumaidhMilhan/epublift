@@ -10,8 +10,35 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+## [cli-v4.1.0] - 2026-10-17
+
+### Changed
+- **`epublift repair` and the upgrade run epubsana 0.30.0.** New repairs:
+  - Every XHTML 1.x named entity is mapped, not 117 of the 248 (`&emsp;`
+    and the rest of the Latin-1, symbol and special sets).
+  - A link nested inside another link in an EPUB 3 document is unwrapped,
+    as it already was in EPUB 2.
+  - Spaces in content-document URLs are percent-encoded.
+  - An XHTML file declared as `text/html` is declared as
+    `application/xhtml+xml` (needs a decision).
+  - A `<script>` whose file is not in the book is deleted, with the
+    document's `scripted` property when nothing else needs it (needs a
+    decision: the four shelf cases all name Kobo's `kobo.js`).
+- **The upgrade relabels XHTML files declared as `text/html`** with
+  epubsana's `fix.html_media_type`, applied without asking like the empty
+  `<title>` fix. EPUB 2 only warns about the label; EPUB 3 rejects it, so
+  every upgrade of such a book failed validation. The file must parse as
+  XHTML, or the label stays. epubveri never fully checked a file labelled
+  `text/html`, so the relabel can bring defects the book always had to
+  light: on the test shelf, 95 hidden errors in one book and 2 in
+  another. The deleted-script fix stays out of the
+  upgrade: it answers no EPUB 3 requirement, and `repair` asks for it.
+- Measured on our 562-book test shelf against cli-v4.0.0: upgraded books
+  that validate 293 → 301; after `repair -y` 378 → 398. Of 252 valid
+  books, 249 stay valid, as before.
+
 ### Fixed
-- **The upgrade no longer adds errors of its own** in three shapes found on
+- **The upgrade no longer adds errors of its own** in four shapes found on
   the test shelf:
   - A package document that writes its namespace with a prefix
     (`<ns0:package>`, from some converters) gets its added `meta` and
@@ -26,6 +53,16 @@ are tagged with the component they belong to.
   - Links in the generated `nav.xhtml` percent-encode spaces in file names
     (`My%20Book_split_004.html`); before, they were copied from `toc.ncx`
     as invalid URLs (4 books).
+
+## [web-v1.26.0] - 2026-10-17
+
+### Changed
+- **Repair runs epubsana 0.30.0** in the browser, the same version as the
+  CLI, with its new repairs (see cli-v4.1.0). On 50 shelf books, the
+  browser's Repair and `epublift repair -y` leave the same error count on
+  every one.
+- **Optimize** gets the upgrade fixes and the `text/html` relabel of
+  cli-v4.1.0.
 
 ## [cli-v4.0.0] - 2026-10-16
 
