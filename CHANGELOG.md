@@ -10,8 +10,10 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+## [cli-v4.0.0] - 2026-10-16
+
 ### Changed
-- **cli (breaking): images are kept as they are by default.** `epublift -i
+- **Breaking: images are kept as they are by default.** `epublift -i
   book.epub` upgrades the structure and leaves JPEG and PNG untouched; add
   `--webp` to re-encode them to WebP (size-safe, as before). Many readers,
   Kobo e-ink among them, show WebP blank, so keeping images is the default
@@ -19,76 +21,63 @@ are tagged with the component they belong to.
   `--target 3.4` still re-encodes to its formats unless `--keep-images` is
   given, and `--kepub --webp` is the same as `--kepub --kepub-webp`. `restore`
   follows the same rules, with `--webp` for WebP on re-target.
-- **web: Keep original is the pre-selected image format** in Optimize and
-  Restore; WebP is one click away.
-- **web: the modes follow the order a book goes through them:** Validate,
-  Repair, Metadata, Optimize, then Archive, Restore, Import, Smart. The page
-  opens on Validate, and the opening text (13 languages) tells that order:
-  check, repair where a fix is certain, complete the metadata, modernize.
-- **`epublift check` and the web Validate mode run epubveri 0.28.0;
-  `epublift repair` and the web Repair mode run epubsana 0.29.0.** epubveri
-  checks `<style>`, `<script>`, `<meta>` and `<base>` in EPUB 2 against
-  XHTML 1.1's attribute lists, grades the encoding of every XML file, checks
-  MathML attribute names per element (`<mi title>` is now `RSC-005`, as in
-  epubcheck) and names the rule and the element path on SVG findings.
-  epubsana adds safe fixes, applied without asking: SVG attribute and
-  element names back to their camelCase (`viewbox` → `viewBox`,
-  `lineargradient` → `linearGradient`), and `dir="LTR"`/`"RTL"` lowercased.
-  It now asks before giving a document with no `<title>` one, before giving
-  an NCX `navPoint` with no `id` one, and an empty title falls back to the
-  book's title. epubsana 0.29.0 drops an empty optional metadata element
-  in an EPUB 3 package too, where it is an error, not only in EPUB 2.
-  Measured on 562 books, 0.26.0 against 0.28.0: the same
-  findings, statuses and exit codes on every book; 14 books gain repair
-  proposals (109 in all). The browser validator gives the
-  same counts as the CLI on all 562.
-- **`--kepub` and the web's .kepub output run kepubverto 0.2.0**, the
-  family's KEPUB converter, in place of epublift's own transform. The span
-  ids are kepubify's, as before, but kepubverto inserts its markup without
-  re-serializing the document, so every other byte stays as it was, and its
-  Kobo style element is valid. Measured on 562 books, graded by epubveri
-  0.28.0 against the same conversion without `--kepub`: the old transform
-  added findings to every book (4,686 `RSC-005` errors, 22,128 `RSC-036`
-  usage notes); kepubverto adds none. `--kepub` with the experimental
-  Zstandard packaging is now refused (Kobo reads only a conformant EPUB).
-- **cli (breaking): the default report goes beside the output**, not beside
-  the input. With `-o elsewhere/`, a run no longer writes
-  `<input>_report.txt` into the input's directory, which may be read-only or
-  shared. Without `-o` nothing changes; `-r/--report` still sets the path.
+- **Breaking: the default report goes beside the output**, not beside the
+  input. With `-o elsewhere/`, a run no longer writes `<input>_report.txt`
+  into the input's directory, which may be read-only or shared. Without `-o`
+  nothing changes; `-r/--report` still sets the path.
+- **`epublift check` runs epubveri 0.28.0 and `epublift repair` runs
+  epubsana 0.29.0.** epubveri checks `<style>`, `<script>`, `<meta>` and
+  `<base>` in EPUB 2 against XHTML 1.1's attribute lists, grades the encoding
+  of every XML file, checks MathML attribute names per element (`<mi title>`
+  is now `RSC-005`, as in epubcheck) and names the rule and the element path
+  on SVG findings. epubsana adds safe fixes, applied without asking: SVG
+  attribute and element names back to their camelCase (`viewbox` →
+  `viewBox`, `lineargradient` → `linearGradient`), and `dir="LTR"`/`"RTL"`
+  lowercased. It now asks before giving a document with no `<title>` one,
+  before giving an NCX `navPoint` with no `id` one, and an empty title falls
+  back to the book's title. It drops an empty optional metadata element in
+  an EPUB 3 package too, where it is an error, not only in EPUB 2. Measured
+  on 562 books, epubveri 0.26.0 against 0.28.0: the same findings, statuses
+  and exit codes on every book.
+- **`--kepub` runs kepubverto 0.2.0**, the family's KEPUB converter, in place
+  of epublift's own transform. The span ids are kepubify's, as before, but
+  kepubverto inserts its markup without re-serializing the document, so
+  every other byte stays as it was, and its Kobo style element is valid.
+  Measured on 562 books, graded by epubveri 0.28.0 against the same
+  conversion without `--kepub`: the old transform added findings to every
+  book (4,686 `RSC-005` errors, 22,128 `RSC-036` usage notes); kepubverto
+  adds none. `--kepub` with the experimental Zstandard packaging is now
+  refused (Kobo reads only a conformant EPUB).
 - **The `gen-sample` test-book binary needs the `gen-sample` feature**
   (`cargo run --features gen-sample --bin gen-sample`), so installing the
   crate installs `epublift` alone. The package sent to crates.io holds only
   the code, README, LICENSE and CHANGELOG.
 
 ### Fixed
-- **The navigation document generated from `toc.ncx` escapes its text.** A
-  label such as `A &amp; B` was written back as a bare `&`, which made
-  `nav.xhtml`, and so the whole book, invalid (`RSC-016`, fatal). Titles,
-  link targets and landmark labels are escaped now.
-- **An empty metadata element gets no EPUB 3 refinement.** The upgrade
-  translated `opf:scheme` or `opf:role` on an empty element into a
-  `<meta refines>` describing nothing, which also kept epubsana from
-  dropping the element.
-- **The upgrade translates EPUB 2 metadata to EPUB 3** instead of carrying
-  attributes EPUB 3 forbids. `opf:role`, `opf:file-as` and an identifier's
-  `opf:scheme` become `<meta refines>` (`role`, with `scheme="marc:relators"`
-  for a MARC code; `file-as`; `identifier-type`). Of several `dc:date`s one
-  stays (publication first); a modification date gives way to
-  `dcterms:modified`, a creation date becomes `dcterms:created`. On 562
-  books this removed every `opf:*` error the upgrade used to add (476 books).
-- **The upgrade finishes with epubsana's EPUB 3 fixes**, run on the packaged
-  book (CLI and web Optimize). Its safe fixes are applied — named entities
-  such as `&nbsp;` become the characters they stand for (the new DOCTYPE
-  declares none), inline SVG gets the manifest's `svg` property — and three
-  fixes that EPUB 3 requires of a book EPUB 2 accepted: an empty `<title>`
-  filled from the book's table of contents, heading or title, the
-  `Content-Type` meta spelled as EPUB 3 wants it, an empty metadata element
-  dropped. Other fixes that need a decision are left to `epublift repair`.
-  Measured on 562 books (epubveri 0.28.0, epubsana 0.29.0): of 252 valid
-  inputs, 249 come out valid (54 before this release's upgrade fixes); 44
-  invalid inputs come out valid.
-- **An SVG 1.1 DOCTYPE is dropped on upgrade** (`OPF-073`: EPUB 3 allows no
-  external identifier on SVG), unless it declares entities the file needs.
+- **An upgraded book stays valid far more often.** Measured on 562 books
+  (epubveri 0.28.0): of 252 valid inputs, 249 come out valid (54 with
+  cli-v3.3.0); 44 invalid inputs come out valid. What changed:
+  - **EPUB 2 metadata is translated to EPUB 3** instead of carrying
+    attributes EPUB 3 forbids. `opf:role`, `opf:file-as` and an
+    identifier's `opf:scheme` become `<meta refines>` (`role`, with
+    `scheme="marc:relators"` for a MARC code; `file-as`;
+    `identifier-type`); an empty element just loses them. Of several
+    `dc:date`s one stays (publication first); a modification date gives way
+    to `dcterms:modified`, a creation date becomes `dcterms:created`.
+  - **The upgrade finishes with epubsana's EPUB 3 fixes**, run on the
+    packaged book. Its safe fixes are applied — named entities such as
+    `&nbsp;` become the characters they stand for (the new DOCTYPE declares
+    none), inline SVG gets the manifest's `svg` property — and three fixes
+    that EPUB 3 requires of a book EPUB 2 accepted: an empty `<title>`
+    filled from the book's table of contents, heading or title, the
+    `Content-Type` meta spelled as EPUB 3 wants it, an empty metadata
+    element dropped. Other fixes that need a decision are left to
+    `epublift repair`.
+  - **The navigation document generated from `toc.ncx` escapes its text.**
+    A label such as `A &amp; B` was written back as a bare `&`, which made
+    the whole book invalid (`RSC-016`, fatal).
+  - **An SVG 1.1 DOCTYPE is dropped** (`OPF-073`: EPUB 3 allows no external
+    identifier on SVG), unless it declares entities the file needs.
 - **A conversion that makes the book larger says so**: "Size grew from 0.86
   MB to 0.92 MB (+6.7%)" instead of "Size reduced … (-6.7% savings)". The
   first line of `--help` no longer says images are converted to WebP.
@@ -98,6 +87,28 @@ are tagged with the component they belong to.
 - **Help texts:** `meta enrich --lang` applies even when the book has a
   `dc:language` and is never written into the book; `meta set --isbn` writes
   a `dc:identifier`, not `dc:source`; `-q/--quality` covers AVIF/JPEG XL too.
+
+## [web-v1.25.0] - 2026-10-16
+
+### Changed
+- **The modes follow the order a book goes through them:** Validate,
+  Repair, Metadata, Optimize, then Archive, Restore, Import, Smart. The page
+  opens on Validate, and the opening text (13 languages) tells that order:
+  check, repair where a fix is certain, complete the metadata, modernize.
+- **Keep original is the pre-selected image format** in Optimize and
+  Restore; WebP is one click away.
+- **Validate runs epubveri 0.28.0 and Repair runs epubsana 0.29.0** in the
+  browser, the same versions as the CLI (see cli-v4.0.0). Measured on 562
+  books: the browser validator gives the same counts as the CLI on all 562.
+- **The .kepub output runs kepubverto 0.2.0** and no longer adds findings to
+  the book (see cli-v4.0.0).
+
+### Fixed
+- **Optimize keeps a valid book valid far more often:** of 252 valid books
+  on our 562-book test shelf, 249 come out valid (54 before). The EPUB 2
+  metadata is translated to EPUB 3, epubsana's EPUB 3 fixes finish the
+  upgrade, the generated navigation document escapes its text, and an SVG
+  1.1 DOCTYPE is dropped (details under cli-v4.0.0).
 
 ## [cli-v3.3.0] - 2026-10-08
 
