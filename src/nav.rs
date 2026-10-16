@@ -82,14 +82,25 @@ pub fn generate_nav_xhtml(ncx_path: &Path, out_path: &Path, guide_refs: &[GuideR
         out.push("\n  <nav epub:type=\"landmarks\" id=\"landmarks\" hidden=\"\">".to_string());
         out.push("    <h2>Guide Landmarks</h2>".to_string());
         out.push("    <ol>".to_string());
+        let mut seen = std::collections::HashSet::new();
         for r in guide_refs {
             let href = r.href.replace('\\', "/");
             let mapped = map_landmark_type(&r.ref_type);
+            // EPUB 3 forbids two landmarks with the same type and target.
+            if !seen.insert((mapped.clone(), href.clone())) {
+                continue;
+            }
+            // A landmark needs a label; a `<reference>` without a title
+            // falls back to its type ("Cover").
+            let label = match r.title.trim() {
+                "" => capitalize_first(&mapped),
+                t => t.to_string(),
+            };
             out.push(format!(
                 "      <li><a epub:type=\"{}\" href=\"{}\">{}</a></li>",
                 escape(&mapped),
                 escape(&href),
-                escape(&r.title)
+                escape(&label)
             ));
         }
         out.push("    </ol>".to_string());
@@ -119,6 +130,7 @@ fn parse_nav_points(parent: roxmltree::Node) -> Vec<NavPoint> {
                     .find(|n| n.is_element() && n.tag_name().name() == "text")
             })
             .and_then(|t| t.text())
+            .filter(|t| !t.trim().is_empty())
             .unwrap_or("Untitled")
             .to_string();
 
@@ -168,6 +180,14 @@ fn render_ol(items: &[NavPoint], level: usize, out: &mut Vec<String>) {
     out.push(format!("{}</ol>", indent));
 }
 
+fn capitalize_first(s: &str) -> String {
+    let mut chars = s.chars();
+    match chars.next() {
+        Some(c) => c.to_uppercase().chain(chars).collect(),
+        None => String::new(),
+    }
+}
+
 /// Map EPUB 2 guide types to EPUB 3 landmark semantics.
 fn map_landmark_type(ref_type: &str) -> String {
     match ref_type {
@@ -210,5 +230,37 @@ mod tests {
         assert!(nav.contains(r#"<a href="a.xhtml?x=1&amp;y=2">Yazar &amp; &lt;Çevirmen&gt;</a>"#));
         assert!(nav.contains(">Start &amp; go</a>"));
         crate::util::parse_xml(&strip_doctype(&nav)).unwrap();
+    }
+
+    #[test]
+    fn every_anchor_has_a_label_and_landmarks_are_unique() {
+        let dir = tempfile::tempdir().unwrap();
+        let ncx = dir.path().join("toc.ncx");
+        fs::write(
+            &ncx,
+            r#"<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head/>
+<navMap><navPoint id="n1" playOrder="1"><navLabel><text> </text></navLabel>
+<content src="a.xhtml"/></navPoint></navMap></ncx>"#,
+        )
+        .unwrap();
+        let r = |t: &str, h: &str, title: &str| GuideRef {
+            ref_type: t.into(),
+            href: h.into(),
+            title: title.into(),
+        };
+        let guide = [
+            r("cover", "c.xhtml", ""),
+            r("text", "a.xhtml", "Text"),
+            r("text", "b.xhtml", "Text"),
+            r("text", "a.xhtml", "Text"),
+        ];
+        let out = dir.path().join("nav.xhtml");
+        generate_nav_xhtml(&ncx, &out, &guide).unwrap();
+        let nav = fs::read_to_string(&out).unwrap();
+        assert!(nav.contains(r#"<a href="a.xhtml">Untitled</a>"#));
+        assert!(nav.contains(r#"<a epub:type="cover" href="c.xhtml">Cover</a>"#));
+        assert_eq!(nav.matches(r#"href="a.xhtml">Text</a>"#).count(), 1);
+        assert_eq!(nav.matches(r#"href="b.xhtml">Text</a>"#).count(), 1);
     }
 }

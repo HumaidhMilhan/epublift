@@ -329,27 +329,34 @@ fn transform_start(
 }
 
 /// Construct the `<meta property="dcterms:modified">` element pieces for `ts`.
-fn write_modified_meta<W: std::io::Write>(writer: &mut Writer<W>, ts: &str) -> Result<()> {
+fn write_modified_meta<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    prefix: &str,
+    ts: &str,
+) -> Result<()> {
     writer.write_event(Event::Text(BytesText::from_escaped("\n    ")))?;
-    let mut m = BytesStart::new("meta");
+    let meta = format!("{prefix}meta");
+    let mut m = BytesStart::new(meta.as_str());
     m.push_attribute(("property", "dcterms:modified"));
     writer.write_event(Event::Start(m))?;
     writer.write_event(Event::Text(BytesText::new(ts)))?;
-    writer.write_event(Event::End(BytesEnd::new("meta")))?;
+    writer.write_event(Event::End(BytesEnd::new(meta)))?;
     Ok(())
 }
 
 /// Write an EPUB 3.4 `<meta property="pageBreakSource">value</meta>` element.
 fn write_page_break_source_meta<W: std::io::Write>(
     writer: &mut Writer<W>,
+    prefix: &str,
     value: &str,
 ) -> Result<()> {
     writer.write_event(Event::Text(BytesText::from_escaped("\n    ")))?;
-    let mut m = BytesStart::new("meta");
+    let meta = format!("{prefix}meta");
+    let mut m = BytesStart::new(meta.as_str());
     m.push_attribute(("property", "pageBreakSource"));
     writer.write_event(Event::Start(m))?;
     writer.write_event(Event::Text(BytesText::new(value)))?;
-    writer.write_event(Event::End(BytesEnd::new("meta")))?;
+    writer.write_event(Event::End(BytesEnd::new(meta)))?;
     Ok(())
 }
 
@@ -500,9 +507,14 @@ fn translate_legacy(
     new
 }
 
-fn write_added_meta<W: std::io::Write>(writer: &mut Writer<W>, m: &AddedMeta) -> Result<()> {
+fn write_added_meta<W: std::io::Write>(
+    writer: &mut Writer<W>,
+    prefix: &str,
+    m: &AddedMeta,
+) -> Result<()> {
     writer.write_event(Event::Text(BytesText::from_escaped("\n    ")))?;
-    let mut e = BytesStart::new("meta");
+    let meta = format!("{prefix}meta");
+    let mut e = BytesStart::new(meta.as_str());
     if let Some(r) = &m.refines {
         e.push_attribute(("refines", r.as_str()));
     }
@@ -512,7 +524,7 @@ fn write_added_meta<W: std::io::Write>(writer: &mut Writer<W>, m: &AddedMeta) ->
     }
     writer.write_event(Event::Start(e))?;
     writer.write_event(Event::Text(BytesText::new(&m.value)))?;
-    writer.write_event(Event::End(BytesEnd::new("meta")))?;
+    writer.write_event(Event::End(BytesEnd::new(meta)))?;
     Ok(())
 }
 
@@ -573,6 +585,9 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
     let mut skip_until_end_meta = false;
     let mut skipping_guide = false;
     let mut guide_depth = 0i32;
+    // The prefix the package element uses for the OPF namespace (`ns0:` in
+    // some converters' output); every element we add must carry it too.
+    let mut prefix = String::new();
 
     loop {
         let ev = reader.read_event()?;
@@ -676,6 +691,7 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                 let ln = local(e.name());
                 match ln.as_str() {
                     "package" => {
+                        prefix = opf_prefix(&e);
                         let new = transform_start(&e, &[("version".into(), "3.0".into())], &[]);
                         writer.write_event(Event::Start(new))?;
                     }
@@ -763,12 +779,12 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                 let ln = local(e.name());
                 match ln.as_str() {
                     "metadata" => {
-                        write_modified_meta(&mut writer, &params.modified_ts)?;
+                        write_modified_meta(&mut writer, &prefix, &params.modified_ts)?;
                         if let Some(src) = &params.page_break_source {
-                            write_page_break_source_meta(&mut writer, src)?;
+                            write_page_break_source_meta(&mut writer, &prefix, src)?;
                         }
                         for m in &added {
-                            write_added_meta(&mut writer, m)?;
+                            write_added_meta(&mut writer, &prefix, m)?;
                         }
                         writer.write_event(Event::Text(BytesText::from_escaped("\n  ")))?;
                         in_metadata = false;
@@ -777,7 +793,8 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                     "manifest" => {
                         if params.add_nav {
                             writer.write_event(Event::Text(BytesText::from_escaped("\n    ")))?;
-                            let mut it = BytesStart::new("item");
+                            let item = format!("{prefix}item");
+                            let mut it = BytesStart::new(item.as_str());
                             it.push_attribute(("id", "nav"));
                             it.push_attribute(("href", "nav.xhtml"));
                             it.push_attribute(("media-type", "application/xhtml+xml"));
@@ -790,14 +807,15 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                     }
                     "package" if !metadata_seen => {
                         // Extremely rare: OPF had no <metadata>. Inject one.
-                        let mut md = BytesStart::new("metadata");
+                        let metadata = format!("{prefix}metadata");
+                        let mut md = BytesStart::new(metadata.as_str());
                         md.push_attribute(("xmlns:dc", NS_DC));
                         md.push_attribute(("xmlns:dcterms", NS_DCTERMS));
                         writer.write_event(Event::Text(BytesText::from_escaped("\n  ")))?;
                         writer.write_event(Event::Start(md))?;
-                        write_modified_meta(&mut writer, &params.modified_ts)?;
+                        write_modified_meta(&mut writer, &prefix, &params.modified_ts)?;
                         writer.write_event(Event::Text(BytesText::from_escaped("\n  ")))?;
-                        writer.write_event(Event::End(BytesEnd::new("metadata")))?;
+                        writer.write_event(Event::End(BytesEnd::new(metadata)))?;
                         writer.write_event(Event::Text(BytesText::from_escaped("\n")))?;
                         metadata_seen = true;
                         writer.write_event(Event::End(e))?;
@@ -811,6 +829,15 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
     }
 
     Ok(String::from_utf8(writer.into_inner())?)
+}
+
+/// The element-name prefix of `package` including its colon (`"ns0:"`), or
+/// `""` when the OPF namespace is the default one.
+fn opf_prefix(package: &BytesStart) -> String {
+    match package.name().prefix() {
+        Some(p) => format!("{}:", p.as_ref()),
+        None => String::new(),
+    }
 }
 
 /// Does this `<meta>` element carry `property="dcterms:modified"`?
@@ -972,6 +999,34 @@ mod tests {
         assert!(!out.contains(">trl<") && !out.contains(">X<"));
         // A non-empty sibling is still translated.
         assert!(out.contains(r##"property="identifier-type">UUID</meta>"##));
+        crate::util::parse_xml(&out).unwrap();
+    }
+
+    #[test]
+    fn added_elements_take_the_package_namespace_prefix() {
+        let opf = r##"<ns0:package unique-identifier="u" version="2.0" xmlns:ns0="http://www.idpf.org/2007/opf">
+  <ns0:metadata>
+    <ns1:identifier id="u" ns0:scheme="uuid" xmlns:ns1="http://purl.org/dc/elements/1.1/">urn:uuid:1</ns1:identifier>
+  </ns0:metadata>
+  <ns0:manifest><ns0:item id="c" href="c.xhtml" media-type="application/xhtml+xml"/></ns0:manifest>
+  <ns0:spine><ns0:itemref idref="c"/></ns0:spine>
+</ns0:package>"##;
+        let mut p = params(Some("urn:isbn:1".into()));
+        p.add_nav = true;
+        let out = rewrite_opf(opf, &p).unwrap();
+        assert!(
+            out.contains(r##"<ns0:meta property="dcterms:modified">"##),
+            "{out}"
+        );
+        assert!(
+            out.contains(r##"<ns0:meta property="pageBreakSource">"##),
+            "{out}"
+        );
+        assert!(
+            out.contains(r##"<ns0:meta refines="#u" property="identifier-type">uuid</ns0:meta>"##)
+        );
+        assert!(out.contains(r##"<ns0:item id="nav" href="nav.xhtml""##));
+        assert!(!out.contains("<meta ") && !out.contains("<item "));
         crate::util::parse_xml(&out).unwrap();
     }
 

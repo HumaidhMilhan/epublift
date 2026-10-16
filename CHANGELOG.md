@@ -10,6 +10,20 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+### Fixed
+- **The upgrade no longer adds errors of its own** in three shapes found on
+  the test shelf:
+  - A package document that writes its namespace with a prefix
+    (`<ns0:package>`, from some converters) gets its added `meta` and
+    `item` elements with the same prefix; before, they fell outside the
+    namespace and broke the package (6 of 562 books).
+  - A `<guide>` reference without a title becomes a landmark labelled with
+    its type ("Cover") instead of an empty link; a table-of-contents entry
+    with a blank label gets "Untitled", as a missing one already did
+    (7 books).
+  - A `<guide>` that lists the same reference twice yields one landmark
+    (1 book).
+
 ## [cli-v4.0.0] - 2026-10-16
 
 ### Security
