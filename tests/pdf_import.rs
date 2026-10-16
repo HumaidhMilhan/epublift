@@ -45,7 +45,7 @@ fn import_text(pdf: &Path) -> (pdf::ImportSummary, String, usize) {
     let mut images = 0usize;
     for i in 0..zip.len() {
         let mut f = zip.by_index(i).unwrap();
-        let name = f.name().to_string();
+        let name = f.name().unwrap().to_string();
         if name.starts_with("OEBPS/images/") {
             images += 1;
         }

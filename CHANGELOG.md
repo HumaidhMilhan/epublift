@@ -10,6 +10,13 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+### Changed
+- **zip 9** for reading and writing EPUB containers (the 8.x line was
+  yanked from crates.io), and the dependencies' compatible updates.
+  Measured on our 562-book test shelf: converted books, `.eparc` archives
+  and restores are the same as before, and the new build restores archives
+  made by the old one byte for byte.
+
 ## [cli-v4.1.0] - 2026-10-17
 
 ### Changed

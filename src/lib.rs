@@ -452,7 +452,7 @@ fn read_entries<R: io::Read + io::Seek>(zip: &mut ZipArchive<R>) -> Result<cover
         if entry.is_dir() {
             continue;
         }
-        let name = entry.name().to_string();
+        let name = entry.name()?.to_string();
         let mut data = Vec::new();
         let read = entry.by_ref().take(budget + 1).read_to_end(&mut data)? as u64;
         if read > budget {

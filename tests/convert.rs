@@ -199,7 +199,7 @@ fn build_epub(dest: &Path, entries: &[Entry]) {
 fn entry_names(epub: &Path) -> Vec<String> {
     let mut zip = ZipArchive::new(std::fs::File::open(epub).unwrap()).unwrap();
     (0..zip.len())
-        .map(|i| zip.by_index(i).unwrap().name().to_string())
+        .map(|i| zip.by_index(i).unwrap().name().unwrap().to_string())
         .collect()
 }
 
@@ -215,7 +215,7 @@ fn read_entry(epub: &Path, name: &str) -> String {
 fn mimetype_first_and_stored(epub: &Path) -> bool {
     let mut zip = ZipArchive::new(std::fs::File::open(epub).unwrap()).unwrap();
     let first = zip.by_index(0).unwrap();
-    first.name() == "mimetype" && first.compression() == CompressionMethod::Stored
+    first.name().unwrap() == "mimetype" && first.compression() == CompressionMethod::Stored
 }
 
 // ---------------------------------------------------------------------------

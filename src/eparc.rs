@@ -356,7 +356,7 @@ fn read_epub_entries(epub: &[u8]) -> Result<Vec<(String, Vec<u8>)>> {
         if !f.is_file() {
             continue;
         }
-        let name = f.name().to_string();
+        let name = f.name()?.to_string();
         let mut data = Vec::with_capacity(f.size() as usize);
         f.read_to_end(&mut data)?;
         out.push((name, data));

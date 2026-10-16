@@ -713,7 +713,7 @@ fn read_entries(path: &Path) -> Result<Vec<OcfEntry>> {
         if !f.is_file() {
             continue;
         }
-        let name = f.name().to_string();
+        let name = f.name()?.to_string();
         let mut data = Vec::with_capacity(f.size() as usize);
         f.read_to_end(&mut data)?;
         entries.push(OcfEntry { name, data });
