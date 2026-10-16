@@ -12,6 +12,10 @@ are tagged with the component they belong to.
 
 ## [cli-v4.0.0] - 2026-10-16
 
+### Security
+- **rustls 0.23.46** (RUSTSEC-2026-0346 to 0349, published on release day),
+  used for the metadata lookups' HTTPS connections.
+
 ### Changed
 - **Breaking: images are kept as they are by default.** `epublift -i
   book.epub` upgrades the structure and leaves JPEG and PNG untouched; add
@@ -89,6 +93,10 @@ are tagged with the component they belong to.
   a `dc:identifier`, not `dc:source`; `-q/--quality` covers AVIF/JPEG XL too.
 
 ## [web-v1.25.0] - 2026-10-16
+
+### Security
+- **rustls 0.23.46** (RUSTSEC-2026-0346 to 0349, published on release day),
+  used for the metadata lookups' HTTPS connections.
 
 ### Changed
 - **The modes follow the order a book goes through them:** Validate,
