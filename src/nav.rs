@@ -84,7 +84,7 @@ pub fn generate_nav_xhtml(ncx_path: &Path, out_path: &Path, guide_refs: &[GuideR
         out.push("    <ol>".to_string());
         let mut seen = std::collections::HashSet::new();
         for r in guide_refs {
-            let href = r.href.replace('\\', "/");
+            let href = nav_href(&r.href);
             let mapped = map_landmark_type(&r.ref_type);
             // EPUB 3 forbids two landmarks with the same type and target.
             if !seen.insert((mapped.clone(), href.clone())) {
@@ -156,7 +156,7 @@ fn render_ol(items: &[NavPoint], level: usize, out: &mut Vec<String>) {
     let indent = "  ".repeat(level);
     out.push(format!("{}<ol>", indent));
     for item in items {
-        let href = item.href.replace('\\', "/");
+        let href = nav_href(&item.href);
         out.push(format!("{}  <li>", indent));
         if href.is_empty() {
             out.push(format!(
@@ -178,6 +178,13 @@ fn render_ol(items: &[NavPoint], level: usize, out: &mut Vec<String>) {
         out.push(format!("{}  </li>", indent));
     }
     out.push(format!("{}</ol>", indent));
+}
+
+/// An NCX `src` or guide `href` as a valid URL for `nav.xhtml`: forward
+/// slashes, and interior spaces percent-encoded (the URL parser already
+/// strips leading and trailing ones).
+fn nav_href(href: &str) -> String {
+    href.trim().replace('\\', "/").replace(' ', "%20")
 }
 
 fn capitalize_first(s: &str) -> String {
@@ -233,7 +240,7 @@ mod tests {
     }
 
     #[test]
-    fn every_anchor_has_a_label_and_landmarks_are_unique() {
+    fn anchors_have_labels_valid_urls_and_unique_landmarks() {
         let dir = tempfile::tempdir().unwrap();
         let ncx = dir.path().join("toc.ncx");
         fs::write(
@@ -241,7 +248,9 @@ mod tests {
             r#"<?xml version="1.0" encoding="UTF-8"?>
 <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head/>
 <navMap><navPoint id="n1" playOrder="1"><navLabel><text> </text></navLabel>
-<content src="a.xhtml"/></navPoint></navMap></ncx>"#,
+<content src="a.xhtml"/></navPoint>
+<navPoint id="n2" playOrder="2"><navLabel><text>Two</text></navLabel>
+<content src=" Gurur Ve_split_004.html#p 1"/></navPoint></navMap></ncx>"#,
         )
         .unwrap();
         let r = |t: &str, h: &str, title: &str| GuideRef {
@@ -259,6 +268,7 @@ mod tests {
         generate_nav_xhtml(&ncx, &out, &guide).unwrap();
         let nav = fs::read_to_string(&out).unwrap();
         assert!(nav.contains(r#"<a href="a.xhtml">Untitled</a>"#));
+        assert!(nav.contains(r#"<a href="Gurur%20Ve_split_004.html#p%201">Two</a>"#));
         assert!(nav.contains(r#"<a epub:type="cover" href="c.xhtml">Cover</a>"#));
         assert_eq!(nav.matches(r#"href="a.xhtml">Text</a>"#).count(), 1);
         assert_eq!(nav.matches(r#"href="b.xhtml">Text</a>"#).count(), 1);

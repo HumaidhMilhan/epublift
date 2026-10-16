@@ -23,6 +23,9 @@ are tagged with the component they belong to.
     (7 books).
   - A `<guide>` that lists the same reference twice yields one landmark
     (1 book).
+  - Links in the generated `nav.xhtml` percent-encode spaces in file names
+    (`My%20Book_split_004.html`); before, they were copied from `toc.ncx`
+    as invalid URLs (4 books).
 
 ## [cli-v4.0.0] - 2026-10-16
 
