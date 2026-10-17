@@ -347,18 +347,34 @@ fn store_verbatim(name: &str) -> bool {
 }
 
 /// Read every file entry of an in-memory EPUB zip, in archive order, as
-/// `(name, uncompressed-bytes)`.
+/// `(name, uncompressed-bytes)`, under the same entry-count and
+/// decompressed-size limits as the converter.
 fn read_epub_entries(epub: &[u8]) -> Result<Vec<(String, Vec<u8>)>> {
     let mut zip = ZipArchive::new(std::io::Cursor::new(epub))?;
+    if zip.len() > crate::MAX_ARCHIVE_ENTRIES {
+        bail!(
+            "EPUB has too many entries ({}); refusing to read it.",
+            zip.len()
+        );
+    }
+    let mut budget = crate::MAX_TOTAL_UNCOMPRESSED;
     let mut out = Vec::with_capacity(zip.len());
     for i in 0..zip.len() {
-        let mut f = zip.by_index(i)?;
-        if !f.is_file() {
-            continue;
+        let name = {
+            let f = zip.by_index_raw(i)?;
+            if !f.is_file() {
+                continue;
+            }
+            f.name()?.to_string()
+        };
+        let mut data = Vec::new();
+        let read = crate::entry_reader(&mut zip, i)?
+            .take(budget + 1)
+            .read_to_end(&mut data)? as u64;
+        if read > budget {
+            bail!("EPUB is too large when decompressed (possible zip bomb).");
         }
-        let name = f.name()?.to_string();
-        let mut data = Vec::with_capacity(f.size() as usize);
-        f.read_to_end(&mut data)?;
+        budget -= read;
         out.push((name, data));
     }
     Ok(out)

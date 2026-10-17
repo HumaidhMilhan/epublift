@@ -301,14 +301,9 @@ pub fn default_output_path(input: &Path, options: &Options) -> PathBuf {
 /// The OPF package document's entry name inside an open EPUB archive (from
 /// `META-INF/container.xml`).
 fn opf_entry_name<R: io::Read + io::Seek>(zip: &mut ZipArchive<R>) -> Result<String> {
-    let container = {
-        let mut e = zip
-            .by_name("META-INF/container.xml")
-            .context("Invalid EPUB: META-INF/container.xml is missing")?;
-        let mut s = String::new();
-        e.read_to_string(&mut s)?;
-        s
-    };
+    let container = read_named(zip, "META-INF/container.xml")?
+        .context("Invalid EPUB: META-INF/container.xml is missing")?;
+    let container = String::from_utf8(container).context("container.xml is not UTF-8")?;
     let doc = crate::util::parse_xml(&container).context("Failed to parse container.xml")?;
     doc.descendants()
         .find(|n| {
@@ -327,11 +322,9 @@ pub fn read_opf_text(epub: &Path) -> Result<String> {
     let file = File::open(epub).with_context(|| format!("EPUB not found: {}", epub.display()))?;
     let mut zip = ZipArchive::new(file).context("Input is not a valid EPUB (zip) archive")?;
     let name = opf_entry_name(&mut zip)?;
-    let mut opf = String::new();
-    zip.by_name(&name)
-        .with_context(|| format!("OPF package document not found in EPUB: {name}"))?
-        .read_to_string(&mut opf)?;
-    Ok(opf)
+    let opf = read_named(&mut zip, &name)?
+        .with_context(|| format!("OPF package document not found in EPUB: {name}"))?;
+    String::from_utf8(opf).context("OPF package document is not UTF-8")
 }
 
 /// Read the book's bibliographic metadata from `epub`. The input is never
@@ -448,13 +441,17 @@ fn read_entries<R: io::Read + io::Seek>(zip: &mut ZipArchive<R>) -> Result<cover
     let mut budget: u64 = MAX_TOTAL_UNCOMPRESSED;
     let mut entries = Vec::with_capacity(zip.len());
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i)?;
-        if entry.is_dir() {
-            continue;
-        }
-        let name = entry.name()?.to_string();
+        let name = {
+            let entry = zip.by_index_raw(i)?;
+            if entry.is_dir() {
+                continue;
+            }
+            entry.name()?.to_string()
+        };
         let mut data = Vec::new();
-        let read = entry.by_ref().take(budget + 1).read_to_end(&mut data)? as u64;
+        let read = entry_reader(zip, i)?
+            .take(budget + 1)
+            .read_to_end(&mut data)? as u64;
         if read > budget {
             bail!("EPUB is too large when decompressed (possible zip bomb).");
         }
@@ -700,8 +697,51 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
 
 /// Upper bounds on extraction, to defend against zip-bombs when processing
 /// untrusted input (e.g. the web service). Legitimate EPUBs are far below these.
-const MAX_ARCHIVE_ENTRIES: usize = 50_000;
-const MAX_TOTAL_UNCOMPRESSED: u64 = 1024 * 1024 * 1024; // 1 GiB
+pub(crate) const MAX_ARCHIVE_ENTRIES: usize = 50_000;
+pub(crate) const MAX_TOTAL_UNCOMPRESSED: u64 = 1024 * 1024 * 1024; // 1 GiB
+
+/// A reader over entry `index`'s uncompressed bytes. Stored and deflated
+/// entries are inflated here from their raw bytes: zip 9 fails any archive read
+/// past the uncompressed size the header declares (zip-rs/zip2#1022), with no
+/// switch to turn that off, where zip 8 and epubcheck read such an entry whole.
+/// The CRC is not checked, as in epubcheck and the family's tools. The header
+/// size is never trusted: callers bound what they read. Anything else (another
+/// method, an encrypted entry) goes through zip's own reader, as before.
+pub(crate) fn entry_reader<'a, R: io::Read + io::Seek + 'a>(
+    zip: &'a mut ZipArchive<R>,
+    index: usize,
+) -> zip::result::ZipResult<Box<dyn io::Read + 'a>> {
+    let (encrypted, method) = {
+        let raw = zip.by_index_raw(index)?;
+        (raw.encrypted(), raw.compression())
+    };
+    Ok(match method {
+        CompressionMethod::Stored if !encrypted => Box::new(zip.by_index_raw(index)?),
+        CompressionMethod::Deflated if !encrypted => {
+            Box::new(flate2::read::DeflateDecoder::new(zip.by_index_raw(index)?))
+        }
+        _ => Box::new(zip.by_index(index)?),
+    })
+}
+
+/// Entry `name`'s bytes, at most [`MAX_TOTAL_UNCOMPRESSED`]; `None` when the
+/// archive has no such entry.
+fn read_named<R: io::Read + io::Seek>(
+    zip: &mut ZipArchive<R>,
+    name: &str,
+) -> Result<Option<Vec<u8>>> {
+    let Some(index) = zip.index_for_name(name) else {
+        return Ok(None);
+    };
+    let mut data = Vec::new();
+    let read = entry_reader(zip, index)?
+        .take(MAX_TOTAL_UNCOMPRESSED + 1)
+        .read_to_end(&mut data)? as u64;
+    if read > MAX_TOTAL_UNCOMPRESSED {
+        bail!("EPUB is too large when decompressed (possible zip bomb).");
+    }
+    Ok(Some(data))
+}
 
 /// Extract every entry of the EPUB zip into `dest`. Enforces an entry-count cap
 /// and a total-uncompressed-size budget (header sizes are attacker-controlled,
@@ -719,13 +759,15 @@ fn extract_epub(input: &Path, dest: &Path) -> Result<()> {
 
     let mut budget: u64 = MAX_TOTAL_UNCOMPRESSED;
     for i in 0..zip.len() {
-        let mut entry = zip.by_index(i)?;
-        let out_path = match entry.enclosed_name() {
-            Some(p) => dest.join(p),
-            None => continue, // skip unsafe (zip-slip) paths
+        let (out_path, is_dir) = {
+            let entry = zip.by_index_raw(i)?;
+            match entry.enclosed_name() {
+                Some(p) => (dest.join(p), entry.is_dir()),
+                None => continue, // skip unsafe (zip-slip) paths
+            }
         };
 
-        if entry.is_dir() {
+        if is_dir {
             fs::create_dir_all(&out_path)?;
         } else {
             if let Some(parent) = out_path.parent() {
@@ -733,7 +775,7 @@ fn extract_epub(input: &Path, dest: &Path) -> Result<()> {
             }
             let mut out = File::create(&out_path)?;
             // Copy at most `budget + 1` bytes; overshooting means a bomb.
-            let written = io::copy(&mut entry.by_ref().take(budget + 1), &mut out)?;
+            let written = io::copy(&mut entry_reader(&mut zip, i)?.take(budget + 1), &mut out)?;
             if written > budget {
                 bail!("EPUB is too large when decompressed (possible zip bomb).");
             }

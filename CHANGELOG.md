@@ -11,11 +11,31 @@ are tagged with the component they belong to.
 ## [Unreleased]
 
 ### Changed
-- **zip 9** for reading and writing EPUB containers (the 8.x line was
-  yanked from crates.io), and the dependencies' compatible updates.
-  Measured on our 562-book test shelf: converted books, `.eparc` archives
-  and restores are the same as before, and the new build restores archives
-  made by the old one byte for byte.
+- **zip 9** for reading and writing EPUB containers, and the family on it:
+  epubveri 0.29.1, epubsana 0.31.0, kepubverto 0.2.1 (crates and the
+  web's Validate and Repair modules together). zip 8 is gone from the
+  build; every zip below 9.0.0 fails `cargo audit`
+  (RUSTSEC-2026-0367/0368/0369, in extraction code epublift never calls).
+  Plus the dependencies' compatible updates. Measured on our 562-book test
+  shelf: converted books, `.eparc` archives and restores are the same as
+  before (the new build also restores the old build's archives), upgraded
+  and repaired books get the same findings, and the web's Validate and
+  Repair agree with the CLI.
+- `epublift check` and web Validate (epubveri 0.29):
+  - an entry that cannot be inflated is a fatal PKG-008 (with RSC-003 for
+    `container.xml`, OPF-001 for the package document), where it used to
+    read as a missing file, so an unreadable `container.xml` came out VALID;
+  - a wrong CRC alone is no longer a finding, as in epubcheck;
+  - a compressed `mimetype` with the right contents is advisory (NEXT-016),
+    not an error. epublift's own output always stores it.
+- `.eparc` archiving applies the converter's entry-count and decompressed-size
+  limits to the book it reads.
+
+### Fixed
+- A book with an entry longer than its header declares (zip 9 refuses to
+  read one; zip 8 and epubcheck read it whole) converts, archives and shows
+  its metadata as before. Stored and deflated entries are inflated from
+  their raw bytes, as in epubveri, epubsana and kepubverto.
 
 ## [cli-v4.1.0] - 2026-10-17
 

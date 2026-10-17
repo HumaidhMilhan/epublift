@@ -938,6 +938,7 @@ dependencies = [
  "crc32fast",
  "epubsana",
  "epubveri",
+ "flate2",
  "image",
  "imgref",
  "kepubverto",
@@ -964,7 +965,7 @@ dependencies = [
  "zenavif",
  "zenjxl",
  "zenwebp",
- "zip 9.0.4",
+ "zip",
  "zstd",
 ]
 
@@ -986,35 +987,37 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "uuid",
- "zip 9.0.4",
+ "zip",
 ]
 
 [[package]]
 name = "epubsana"
-version = "0.30.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f73fad57cdffde50eb312be143139d900e1cdbf9cc9662ec4b91a0939b40ac75"
+checksum = "ef592f4552225f01e0486c060d95b6dbb04b9653cb6aeb46df0d24d065b4965f"
 dependencies = [
  "epubveri",
+ "flate2",
  "roxmltree",
  "serde",
  "serde_json",
  "unicode-normalization",
- "zip 8.6.0",
+ "zip",
 ]
 
 [[package]]
 name = "epubveri"
-version = "0.28.0"
+version = "0.29.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b8a00cf206b6e2bab5c19d665ddb57163ca5037356a52bc889aa8114ef4e3b0"
+checksum = "0c27bff0faacb86e84257eacc39869b3ca06aa835195e57911b4c4e4ea90ae90"
 dependencies = [
+ "flate2",
  "roxmltree",
  "serde",
  "serde_json",
  "styloria",
  "unicode-normalization",
- "zip 8.6.0",
+ "zip",
 ]
 
 [[package]]
@@ -1520,15 +1523,16 @@ dependencies = [
 
 [[package]]
 name = "kepubverto"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53566cc539a11a99fffe2c097633b63e3f3c485947928024d4f4f3ec18206d36"
+checksum = "11ce2f396424d6a49685375e2ec4d70672f21a5124c7c90cf18aa7986413a785"
 dependencies = [
  "epubveri",
+ "flate2",
  "roxmltree",
  "serde",
  "serde_json",
- "zip 8.6.0",
+ "zip",
 ]
 
 [[package]]
@@ -3855,20 +3859,6 @@ name = "zeroize"
 version = "1.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13084392c5e4bc371903e2935a5eaeed24905a7511356b883835e18a78f6879"
-
-[[package]]
-name = "zip"
-version = "8.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
-dependencies = [
- "crc32fast",
- "flate2",
- "indexmap",
- "memchr",
- "typed-path",
- "zopfli",
-]
 
 [[package]]
 name = "zip"

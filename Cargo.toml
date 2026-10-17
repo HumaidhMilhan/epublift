@@ -75,7 +75,10 @@ required-features = ["img-calib"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-zip = { version = "9", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.4", default-features = false, features = ["deflate"] }
+# Inflates stored and deflated EPUB entries from their raw bytes
+# (`entry_reader`), on the pure-Rust backend zip's "deflate" feature uses.
+flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 zenwebp = "0.4"
 quick-xml = "0.42"
@@ -99,23 +102,23 @@ ocrs = { version = "0.13", optional = true }
 rten = { version = "0.26", optional = true }
 # epubveri, the veripublica family's pure-Rust, JVM-free alternative to W3C
 # epubcheck. Dogfooding — we consume the published crate exactly like any other
-# user would. Pure Rust, and shares our own `zip` 8 and `roxmltree` 0.21 rather
+# user would. Pure Rust, and shares our own `zip` 9 and `roxmltree` 0.21 rather
 # than pulling second copies. Always linked, for `xmlguard::check`: every
 # roxmltree parse of book XML goes through it first (see `util::parse_xml`), so a
 # hostile document is declined instead of aborting the process. The validator
 # itself (`epublift check`) stays behind the opt-in `validate` feature; see
 # docs/validate.md.
-epubveri = "0.28.0"
+epubveri = "0.29.1"
 # epubsana, the family's confirm-each-step repairer: `epublift repair` runs its
 # core `repair()` — the same function `epubsana` and its browser build run — so
 # a book repaired here and there comes back identical. Pure Rust, on the same
-# epubveri, zip 8 and roxmltree 0.21 as we are. See docs/repair.md.
-epubsana = "0.30.0"
+# epubveri, zip 9 and roxmltree 0.21 as we are. See docs/repair.md.
+epubsana = "0.31.0"
 # kepubverto, the family's KEPUB converter: `--kepub` and the web's .kepub run
 # its `convert()` on the packaged book, so the Kobo markup is exactly what
-# `kepubverto` writes. Pure Rust, on the same epubveri, zip 8 and
+# `kepubverto` writes. Pure Rust, on the same epubveri, zip 9 and
 # roxmltree 0.21.
-kepubverto = "0.2.0"
+kepubverto = "0.2.1"
 # `--format json` on `check` and `repair`: the shared veripublica envelope.
 # epubsana already links it, so it costs the default build nothing.
 serde_json = "1"
@@ -250,7 +253,7 @@ webpki-roots = ["dep:webpki-roots"]
 
 [dev-dependencies]
 # Used by the integration tests to assemble EPUB fixtures and inspect output.
-zip = { version = "9", default-features = false, features = ["deflate"] }
+zip = { version = "9.0.4", default-features = false, features = ["deflate"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 tempfile = "3"
 

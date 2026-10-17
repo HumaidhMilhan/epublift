@@ -826,3 +826,37 @@ fn report_goes_beside_the_output() {
     left.sort();
     assert_eq!(left, ["legacy.epub"], "nothing new beside the input");
 }
+
+/// Declare entry `name` 100 bytes long in its local and central headers; the
+/// data and the CRC stay intact.
+fn understate_size(epub: &Path, name: &str) {
+    let mut b = std::fs::read(epub).unwrap();
+    let n = name.as_bytes();
+    for i in 0..b.len() - 46 {
+        if b[i..].starts_with(b"PK\x03\x04") && b[i + 30..].starts_with(n) {
+            b[i + 22..i + 26].copy_from_slice(&100u32.to_le_bytes());
+        }
+        if b[i..].starts_with(b"PK\x01\x02") && b[i + 46..].starts_with(n) {
+            b[i + 24..i + 28].copy_from_slice(&100u32.to_le_bytes());
+        }
+    }
+    std::fs::write(epub, b).unwrap();
+}
+
+#[test]
+fn entry_longer_than_its_header_says_is_read_whole() {
+    // zip 9 refuses such an entry; zip 8 and epubcheck read it, and so do we.
+    let dir = tempfile::tempdir().unwrap();
+    let input = dir.path().join("legacy.epub");
+    build_epub(&input, &legacy_text_only());
+    understate_size(&input, "OEBPS/content.opf");
+
+    let report = convert(&input, &Options::default(), |_| {}).unwrap();
+    assert!(read_entry(&report.output_path, "OEBPS/content.opf").contains("version=\"3.0\""));
+    assert!(epublift::read_metadata(&input).is_ok());
+    let eparc = dir.path().join("legacy.eparc");
+    epublift::eparc::archive_epub(&input, &eparc).unwrap();
+    let restored = dir.path().join("restored.epub");
+    epublift::eparc::restore_eparc(&eparc, &restored).unwrap();
+    assert!(read_entry(&restored, "OEBPS/content.opf").len() > 100);
+}
