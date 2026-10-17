@@ -10,6 +10,8 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+## [cli-v4.2.0] - 2026-10-17
+
 ### Changed
 - **zip 9** for reading and writing EPUB containers, and the family on it:
   epubveri 0.29.1, epubsana 0.31.0, kepubverto 0.2.1 (crates and the
@@ -36,6 +38,20 @@ are tagged with the component they belong to.
   read one; zip 8 and epubcheck read it whole) converts, archives and shows
   its metadata as before. Stored and deflated entries are inflated from
   their raw bytes, as in epubveri, epubsana and kepubverto.
+
+## [web-v1.27.0] - 2026-10-17
+
+### Changed
+- **Validate runs epubveri 0.29.1 and Repair epubsana 0.31.0** in the
+  browser, the same versions as the CLI, with the Validate changes of
+  cli-v4.2.0 (unreadable entries are a fatal PKG-008; a wrong CRC alone and a
+  compressed `mimetype` are no longer errors). On 50 shelf books, both agree
+  with the CLI on every one.
+- Archive applies the converter's entry-count and decompressed-size limits.
+
+### Fixed
+- Optimize, Metadata and Archive read a book with an entry longer than its
+  header declares, as before zip 9 (see cli-v4.2.0).
 
 ## [cli-v4.1.0] - 2026-10-17
 
