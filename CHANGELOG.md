@@ -21,6 +21,9 @@ are tagged with the component they belong to.
   - `meta show --json` → `meta show --format metadata` (`--json` is the
     shared envelope in `check`).
 - The `check` and `repair` JSON envelopes now say `"convention": "0.7"`.
+- epubveri 0.30.0, epubsana 0.32.0 and kepubverto 0.2.2 (crates and the
+  web's Validate and Repair modules together), on styloria 0.13's
+  selector parser.
 
 ## [cli-v4.2.0] - 2026-10-17
 

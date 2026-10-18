@@ -992,9 +992,9 @@ dependencies = [
 
 [[package]]
 name = "epubsana"
-version = "0.31.0"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef592f4552225f01e0486c060d95b6dbb04b9653cb6aeb46df0d24d065b4965f"
+checksum = "2707261e4c044508379a2d3f6483a5d723137f6103e8ba71da2599f3532248c6"
 dependencies = [
  "epubveri",
  "flate2",
@@ -1007,9 +1007,9 @@ dependencies = [
 
 [[package]]
 name = "epubveri"
-version = "0.29.1"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0c27bff0faacb86e84257eacc39869b3ca06aa835195e57911b4c4e4ea90ae90"
+checksum = "da39f74ff898e4b9b8e8c55174f5b4f6edb3983bcc8c323ded61d8b5f6d05598"
 dependencies = [
  "flate2",
  "roxmltree",
@@ -1523,9 +1523,9 @@ dependencies = [
 
 [[package]]
 name = "kepubverto"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11ce2f396424d6a49685375e2ec4d70672f21a5124c7c90cf18aa7986413a785"
+checksum = "fb8a98b49da6402ada07c4bf4bc115826a774ac39f0532b8e952bb51548152ef"
 dependencies = [
  "epubveri",
  "flate2",
@@ -2915,9 +2915,9 @@ dependencies = [
 
 [[package]]
 name = "styloria"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34a602bfa35666f0bd9242741f08ef5cd3ea65fe6e2b25aecaf6ae6f77a9bcb4"
+checksum = "e03077c562f26d9cb642bee337e1fd1a97a40f5d5ee2d15ef022b664cd06b253"
 
 [[package]]
 name = "subtle"
