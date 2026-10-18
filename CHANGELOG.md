@@ -21,6 +21,12 @@ are tagged with the component they belong to.
   - `meta show --json` → `meta show --format metadata` (`--json` is the
     shared envelope in `check`).
 - The `check` and `repair` JSON envelopes now say `"convention": "0.7"`.
+- Optimize writes out the named characters an XHTML 1.x DOCTYPE declared
+  (`&nbsp;`, `&rsquo;`, …) when it replaces that DOCTYPE with EPUB 3's,
+  instead of leaving them undeclared for the final repair pass. Same output,
+  much faster on books with many documents: an 805-document book took 11
+  minutes on the command line and timed out on the web; it now takes 5
+  seconds.
 - epubveri 0.30.0, epubsana 0.32.0 and kepubverto 0.2.2 (crates and the
   web's Validate and Repair modules together), on styloria 0.13's
   selector parser.

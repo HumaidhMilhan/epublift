@@ -1,10 +1,14 @@
 //! The epubsana pass that finishes an upgrade.
 //!
 //! Moving a book from EPUB 2 to EPUB 3 makes some of what EPUB 2 accepted
-//! invalid: named entities with no DTD to declare them, inline SVG without the
-//! manifest's `svg` property, an empty `<title>`, a `Content-Type` meta in its
-//! EPUB 2 spelling, an empty `dc:rights`. epubsana repairs these, so the
-//! upgrade runs it on the packaged book rather than repairing them itself.
+//! invalid: inline SVG without the manifest's `svg` property, an empty
+//! `<title>`, a `Content-Type` meta in its EPUB 2 spelling, an empty
+//! `dc:rights`. epubsana repairs these, so the upgrade runs it on the packaged
+//! book rather than repairing them itself. The named entities an XHTML 1.x
+//! DTD declared are not left to it: the DOCTYPE swap that undeclares them
+//! writes them out (`util::resolve_dtd_entities`), because one epubsana fix
+//! per document, each followed by a check of the whole book, took 11 minutes
+//! on an 805-document book.
 //!
 //! epubsana's safe fixes are applied as they are everywhere. Of the fixes that
 //! need a decision, only [`UPGRADE_FIXES`] are applied: each answers something

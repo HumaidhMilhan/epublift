@@ -119,6 +119,9 @@ pub fn slugify_ascii(stem: &str) -> String {
 
 /// Standardize HTML/XHTML files to EPUB 3 best practices:
 /// - Replace legacy DOCTYPE declarations with the HTML5 `<!DOCTYPE html>`.
+///   An XHTML 1.x DOCTYPE declared the HTML named entities (`&nbsp;`, …); its
+///   replacement declares none, so the references are written out as the
+///   characters they denote (see [`resolve_dtd_entities`]).
 /// - Ensure the XHTML namespace is declared on the `<html>` element.
 /// - Drop an SVG 1.1 DOCTYPE (`OPF-073`: EPUB 3 allows no external identifier
 ///   on SVG), unless it has an internal subset, whose entities the file needs.
@@ -162,9 +165,17 @@ pub fn standardize_xhtml_files(root: &Path, progress: &dyn Fn(&str)) -> Result<(
         };
         let mut content = String::from_utf8_lossy(&raw).into_owned();
 
+        // Only a DOCTYPE with an external identifier (XHTML 1.0/1.1) declared
+        // the entities; a book already on `<!DOCTYPE html>` gains nothing here.
+        let declared_entities = doctype_re
+            .find(&content)
+            .is_some_and(|m| m.as_str().contains("PUBLIC") || m.as_str().contains("SYSTEM"));
         content = doctype_re
             .replace_all(&content, "<!DOCTYPE html>")
             .into_owned();
+        if declared_entities {
+            content = resolve_dtd_entities(&content);
+        }
 
         if !content.contains("xmlns=\"http://www.w3.org/1999/xhtml\"") {
             content = content.replace("<html", "<html xmlns=\"http://www.w3.org/1999/xhtml\"");
@@ -179,6 +190,37 @@ pub fn standardize_xhtml_files(root: &Path, progress: &dyn Fn(&str)) -> Result<(
         }
     }
     Ok(())
+}
+
+/// Replace each named reference the XHTML 1.x DTDs declared (`&nbsp;`,
+/// `&rsquo;`, …) with the character it denotes, as the DTD defined it. The
+/// table is epubsana's (`epubsana::entities::lookup`, from epubveri's DTD
+/// sets), so the upgrade and the repair agree on every name; the XML five
+/// (`&amp;`, …) and names outside those sets are left as written. Comments and
+/// CDATA sections are copied unchanged: a reference there was never expanded.
+pub fn resolve_dtd_entities(content: &str) -> String {
+    let skip_re = Regex::new(r"(?s)<!--.*?-->|<!\[CDATA\[.*?\]\]>").unwrap();
+    let ref_re = Regex::new(r"&([A-Za-z][A-Za-z0-9]*);").unwrap();
+    let resolve = |text: &str| {
+        ref_re
+            .replace_all(
+                text,
+                |c: &regex::Captures| match epubsana::entities::lookup(&c[1]) {
+                    Some(ch) => ch.to_string(),
+                    None => c[0].to_string(),
+                },
+            )
+            .into_owned()
+    };
+    let mut out = String::with_capacity(content.len());
+    let mut last = 0;
+    for m in skip_re.find_iter(content) {
+        out.push_str(&resolve(&content[last..m.start()]));
+        out.push_str(m.as_str());
+        last = m.end();
+    }
+    out.push_str(&resolve(&content[last..]));
+    out
 }
 
 /// Detect content documents that use **HTML syntax** rather than XHTML, which
@@ -231,6 +273,43 @@ pub fn detect_html_syntax(root: &Path) -> Vec<String> {
 mod tests {
     use super::{detect_html_syntax, slugify_ascii, standardize_xhtml_files};
     use std::fs;
+
+    #[test]
+    fn xhtml11_doctype_swap_writes_out_its_entities() {
+        // The XHTML 1.1 DTD declared &nbsp; and &rsquo;; <!DOCTYPE html> does
+        // not, so they become characters. The XML five, unknown names, comments
+        // and CDATA stay as written.
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("c.html");
+        fs::write(
+            &f,
+            "<?xml version=\"1.0\"?>\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\" \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\n\
+             <html xmlns=\"http://www.w3.org/1999/xhtml\"><head><title>t</title></head><body>\
+             <p>a&nbsp;b &rsquo;c&amp;d &NewLine; &Eacute;</p><!-- &nbsp; --><script>/*<![CDATA[*/ x=\"&nbsp;\" /*]]>*/</script></body></html>",
+        )
+        .unwrap();
+        standardize_xhtml_files(dir.path(), &|_| {}).unwrap();
+        let out = fs::read_to_string(&f).unwrap();
+        assert!(out.contains("<!DOCTYPE html>"), "{out}");
+        assert!(
+            out.contains("<p>a\u{a0}b \u{2019}c&amp;d &NewLine; \u{c9}</p>"),
+            "{out}"
+        );
+        assert!(out.contains("<!-- &nbsp; -->"), "{out}");
+        assert!(out.contains("x=\"&nbsp;\""), "{out}");
+    }
+
+    #[test]
+    fn html5_doctype_keeps_its_references() {
+        // Without a DTD the references were never declared; the swap did not
+        // cause them and leaves them to the repair.
+        let dir = tempfile::tempdir().unwrap();
+        let f = dir.path().join("d.xhtml");
+        let text = "<?xml version=\"1.0\"?>\n<!DOCTYPE html>\n<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>a&nbsp;b</p></body></html>";
+        fs::write(&f, text).unwrap();
+        standardize_xhtml_files(dir.path(), &|_| {}).unwrap();
+        assert_eq!(fs::read_to_string(&f).unwrap(), text);
+    }
 
     #[test]
     fn drops_svg_doctype_unless_it_declares_entities() {
