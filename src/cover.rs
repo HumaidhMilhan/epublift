@@ -1,6 +1,6 @@
 //! The book's cover image: read the one it declares, and replace it (or add
 //! one) with a JPEG or PNG the user chose — `meta set --cover`, `meta enrich
-//! --cover` and the web Metadata form. See `docs/metadata.md` § Cover.
+//! --include-cover` and the web Metadata form. See `docs/metadata.md` § Cover.
 //!
 //! The image goes in **as given**: no re-encode, no resize (Optimize does
 //! that, and Kobo shows no WebP cover in a plain `.epub`). What has to change

@@ -236,7 +236,7 @@ impl From<RepairGoal> for epubsana::Goal {
 
 /// The veripublica conventions version whose FORMATS.md the `check` and
 /// `repair` json envelopes meet — asserted by epublift about itself (FORMATS §1.1).
-const ENVELOPE_CONVENTION: &str = "0.6";
+const ENVELOPE_CONVENTION: &str = "0.7";
 
 /// `--format`'s help: veripublica conventions' canonical one-liner, verbatim.
 const FORMAT_HELP: &str =
@@ -349,8 +349,9 @@ struct MetaShowArgs {
         conflicts_with = "json"
     )]
     format: MetaFormat,
-    /// Same as `--format metadata`.
-    #[arg(long)]
+    // Deprecated: `--json` means the envelope family-wide (conventions CLI.md
+    // §3.2.2), which this is not. Kept for one release, with a warning.
+    #[arg(long, hide = true)]
     json: bool,
 }
 
@@ -422,7 +423,10 @@ struct MetaEnrichArgs {
     /// in another language are skipped. Defaults to the book's `dc:language`
     /// (required when the book has none). Never written into the book; use
     /// `meta set --language` for that.
-    #[arg(long)]
+    #[arg(long, value_name = "LANG", conflicts_with = "lang")]
+    assume_language: Option<String>,
+    // Deprecated spelling of --assume-language, kept for one release.
+    #[arg(long, hide = true)]
     lang: Option<String>,
     /// Metadata provider: `openlibrary` (default) or `google` (Google Books).
     #[arg(long, default_value = "openlibrary", value_name = "openlibrary|google")]
@@ -444,7 +448,11 @@ struct MetaEnrichArgs {
     #[arg(long)]
     include_subjects: bool,
     /// Also make the catalogue's cover the book's cover, when it has one.
-    #[arg(long)]
+    #[arg(long, conflicts_with = "cover")]
+    include_cover: bool,
+    // Deprecated spelling of --include-cover (`--cover` takes a path in
+    // `meta set`), kept for one release.
+    #[arg(long, hide = true)]
     cover: bool,
     /// Output path (default: `<name>_meta.epub` next to the input).
     #[arg(short, long)]
@@ -776,6 +784,9 @@ fn run_meta(args: &MetaArgs) -> Result<()> {
             let md = epublift::read_metadata(&input)?;
             let cover = epublift::read_cover(&input)?;
             // `--json` is the older spelling of `--format metadata`.
+            if s.json {
+                deprecated("meta show --json", "meta show --format metadata");
+            }
             if s.json || s.format == MetaFormat::Metadata {
                 let json = md.to_json();
                 let body = json.strip_suffix("\n}").unwrap_or(&json);
@@ -1230,6 +1241,12 @@ fn print_repair_report(
     }
 }
 
+/// Warn that `old` is a deprecated spelling, on stderr so `--format metadata`
+/// output stays clean.
+fn deprecated(old: &str, new: &str) {
+    eprintln!("[!] {old} is deprecated and goes in the next major release; use {new}.");
+}
+
 /// `epublift meta enrich …` — fill missing metadata from an online catalogue.
 #[cfg(feature = "metadata")]
 fn run_meta_enrich(e: &MetaEnrichArgs) -> Result<()> {
@@ -1240,9 +1257,16 @@ fn run_meta_enrich(e: &MetaEnrichArgs) -> Result<()> {
         .canonicalize()
         .with_context(|| format!("Input file not found: {}", e.input.display()))?;
     let existing = epublift::read_metadata(&input)?;
+    if e.lang.is_some() {
+        deprecated("--lang", "--assume-language");
+    }
+    if e.cover {
+        deprecated("meta enrich --cover", "--include-cover");
+    }
+    let include_cover = e.include_cover || e.cover;
 
     let opts = EnrichOptions {
-        lang_override: e.lang.clone(),
+        lang_override: e.assume_language.clone().or_else(|| e.lang.clone()),
         overwrite: e.overwrite,
         allow_foreign_meta: e.allow_foreign_meta,
         include_description: e.include_description,
@@ -1269,7 +1293,7 @@ fn run_meta_enrich(e: &MetaEnrichArgs) -> Result<()> {
     }
 
     // The catalogue's cover: shown next to the book's own, applied only on
-    // --cover (often it is smaller than the one the book has).
+    // --include-cover (often it is smaller than the one the book has).
     let mut cover = None;
     match &fetched.cover_url {
         None => println!("[i] {provider_label} has no cover for this ISBN."),
@@ -1291,10 +1315,10 @@ fn run_meta_enrich(e: &MetaEnrichArgs) -> Result<()> {
                 }) {
                     println!("    It is smaller than the book's own cover.");
                 }
-                if e.cover {
+                if include_cover {
                     cover = Some(c);
                 } else {
-                    println!("    Pass --cover to make it the book's cover.");
+                    println!("    Pass --include-cover to make it the book's cover.");
                 }
             }
         },

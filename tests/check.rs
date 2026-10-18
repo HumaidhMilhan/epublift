@@ -83,7 +83,7 @@ fn json_is_the_shared_envelope_and_flags_invalid() {
     // The veripublica envelope skeleton (FORMATS.md §1.1): exactly one object,
     // naming the tool that produced it and the convention it conforms to.
     assert_eq!(v["tool"], "epublift");
-    assert_eq!(v["convention"], "0.6");
+    assert_eq!(v["convention"], "0.7");
     assert!(v["tool_version"].is_string());
     // `status` mirrors the exit code: a graded book with fatal findings is
     // "problems" (exit 1), never "error" (which means no report was possible).

@@ -119,7 +119,7 @@ epublift meta enrich book.epub --isbn 9780… --provider google         # Google
 ```
 
 `meta enrich` is **language-aware**: it fills only fields in the book's own
-language (`dc:language`, or `--lang`), matching by ISBN-13 — English work-level
+language (`dc:language`, or `--assume-language`), matching by ISBN-13 — English work-level
 subjects/description are skipped on a non-English book unless `--allow-foreign-meta`.
 By default it fills only gaps (`--overwrite` replaces existing fields) and
 `--dry-run` previews without writing; `--include-description` opts the description

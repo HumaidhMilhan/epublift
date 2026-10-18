@@ -121,7 +121,7 @@ command-line order.
 {
   "tool": "epublift",
   "tool_version": "4.2.0",
-  "convention": "0.6",
+  "convention": "0.7",
   "status": "problems",
   "inputs": [
     {
@@ -167,7 +167,7 @@ Worth knowing when consuming it:
   envelope never carries a `suppressed` marker.
 - **`convention`** is epublift's own claim about this output: the envelope meets
   [FORMATS.md](https://github.com/veripublica/conventions/blob/main/FORMATS.md)
-  of veripublica conventions 0.6. It is a claim about the JSON, not yet about the
+  of veripublica conventions 0.7. It is a claim about the JSON, not yet about the
   whole command line: `check` now takes `--format` as conventions' CLI.md asks,
   but still takes positional paths rather than `-i`.
 - Fields that don't apply are **omitted**, and unknown fields **must be ignored**:

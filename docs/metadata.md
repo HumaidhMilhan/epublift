@@ -57,7 +57,7 @@ A Turkish book gets Turkish metadata; a Korean book gets Korean metadata. We do
   (`Einfu hrung` next to `Einführung`).
 - If the matched edition's language disagrees with the book's `dc:language`, the
   tool **warns** (the ISBN may point at a different-language edition).
-- If the book has no `dc:language`, `enrich` requires `--lang <BCP-47>` or aborts
+- If the book has no `dc:language`, `enrich` requires `--assume-language <BCP-47>` or aborts
   with a clear message.
 - The list of skipped, language-mismatched fields is reported — it doubles as a
   "what to enrich upstream at Open Library" list for a future contribution effort.
@@ -151,11 +151,11 @@ epublift meta set    --title "…" --author "…" \      # manual edit (repeatab
                      --subject "…" --series "…:1" \
                      [--cover new.jpg] book.epub      # --cover: make this JPEG/PNG the cover
 
-epublift meta enrich --isbn 9780… [--lang tr] \      # auto-fill missing fields from a provider
+epublift meta enrich --isbn 9780… [--assume-language tr] \  # auto-fill missing fields from a provider
                      [--provider openlibrary] \
                      [--dry-run] [--overwrite] [--allow-foreign-meta] \
                      [--include-description] [--include-subjects] \
-                     [--cover] book.epub
+                     [--include-cover] book.epub
 ```
 
 - `show` and `set` are always available and **offline**. `enrich` needs the
@@ -166,14 +166,20 @@ epublift meta enrich --isbn 9780… [--lang tr] \      # auto-fill missing field
   publisher-authored) description in; `--include-subjects` opts the subjects
   in (they are listed either way).
 - `enrich` shows the catalogue's cover next to the book's own (sizes, and a
-  note when it is smaller); `--cover` makes it the book's cover.
+  note when it is smaller); `--include-cover` makes it the book's cover.
+- **Renamed after cli-v4.2.0** (one long name, one meaning across the veripublica
+  tools): `enrich --lang` → `--assume-language`, `enrich --cover` →
+  `--include-cover` (`--cover` takes a path in `set`), and `show --json` →
+  `show --format metadata` (`--json` is the shared envelope elsewhere). The old
+  spellings still work in 4.x with a warning on stderr; the next major removes
+  them.
 - `--series` takes `Name` or `Name:position`; the position starts with a digit
   (`Dune:2`, `Dune:1-6`), so a colon inside a name stays in the name.
 - Output naming follows the project convention; the input is never mutated.
 
 ## Cover
 
-`meta set --cover`, `meta enrich --cover` and the web form's Cover section
+`meta set --cover`, `meta enrich --include-cover` and the web form's Cover section
 replace the book's cover, or add one to a book that has none.
 
 - **JPEG or PNG, at most 10 MB, put in as given** — no re-encode, no resize

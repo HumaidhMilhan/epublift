@@ -579,7 +579,7 @@ fn decide(present: bool, overwrite: bool, lang_ok: bool) -> Decide {
 
 /// Build the gap-filling, language-aware plan to merge `fetched` into `existing`.
 ///
-/// Resolves the book's language (from `--lang` or `dc:language`), then for each
+/// Resolves the book's language (from `--assume-language` or `dc:language`), then for each
 /// field decides Set / skip-present / skip-language. Edition-level fields obey the
 /// matched edition language; work-level fields (subjects, description) are treated
 /// as foreign unless the book is English or `--allow-foreign-meta` is set.
@@ -592,7 +592,9 @@ pub fn plan_enrich(
         .lang_override
         .clone()
         .or_else(|| existing.languages.first().cloned())
-        .context("book has no dc:language; pass --lang <BCP-47> (e.g. --lang tr)")?;
+        .context(
+            "book has no dc:language; pass --assume-language <BCP-47> (e.g. --assume-language tr)",
+        )?;
     let book_primary = primary_subtag(&book_lang);
 
     let mut plan = EnrichPlan {

@@ -46,7 +46,7 @@ fn show(args: &[&str], epub: &std::path::Path) -> (Option<i32>, String, String) 
 }
 
 #[test]
-fn format_metadata_is_the_json_object_and_json_is_its_alias() {
+fn format_metadata_is_the_json_object_and_json_is_its_deprecated_alias() {
     let dir = tempfile::tempdir().unwrap();
     let epub = tiny_epub(dir.path());
 
@@ -59,11 +59,36 @@ fn format_metadata_is_the_json_object_and_json_is_its_alias() {
     assert_eq!(code, Some(0));
     let v: serde_json::Value = serde_json::from_str(&md).expect("one JSON object");
     assert!(md.contains("Tiny Book"), "got: {v}");
-    assert_eq!(
-        show(&["--json"], &epub).1,
-        md,
-        "--json must print what --format metadata prints"
+    let (code, out, err) = show(&["--json"], &epub);
+    assert_eq!(code, Some(0));
+    assert_eq!(out, md, "--json must print what --format metadata prints");
+    // Deprecated (conventions CLI.md §3.2.2: `--json` is the envelope family-wide),
+    // and the warning goes to stderr so the JSON on stdout stays clean.
+    assert!(
+        err.contains("deprecated") && err.contains("--format metadata"),
+        "got: {err}"
     );
+}
+
+#[test]
+#[cfg(feature = "metadata")]
+fn enrich_old_and_new_spellings_conflict() {
+    // `--lang` / `--cover` are the deprecated spellings of `--assume-language` /
+    // `--include-cover`; giving both is a usage error (exit 2) before any lookup.
+    let dir = tempfile::tempdir().unwrap();
+    let epub = tiny_epub(dir.path());
+    for pair in [
+        ["--lang", "en", "--assume-language", "en"].as_slice(),
+        ["--cover", "--include-cover"].as_slice(),
+    ] {
+        let out = Command::new(bin())
+            .args(["meta", "enrich", "--isbn", "9780000000002"])
+            .args(pair)
+            .arg(&epub)
+            .output()
+            .expect("run epublift meta enrich");
+        assert_eq!(out.status.code(), Some(2), "{pair:?}");
+    }
 }
 
 #[test]

@@ -10,6 +10,18 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+### Changed
+- **veripublica conventions v0.7** (a long option name means one thing in
+  every family tool). Three `meta` spellings change; the old ones still
+  work in 4.x, print a warning on stderr, and go in the next major:
+  - `meta enrich --lang` → `--assume-language` (`--language` writes
+    `dc:language`; this one only steers the lookup);
+  - `meta enrich --cover` → `--include-cover` (`meta set --cover` takes an
+    image path);
+  - `meta show --json` → `meta show --format metadata` (`--json` is the
+    shared envelope in `check`).
+- The `check` and `repair` JSON envelopes now say `"convention": "0.7"`.
+
 ## [cli-v4.2.0] - 2026-10-17
 
 ### Changed
