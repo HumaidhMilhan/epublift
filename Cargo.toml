@@ -119,6 +119,11 @@ epubsana = "0.33.0"
 # `kepubverto` writes. Pure Rust, on the same epubveri, zip 9 and
 # roxmltree 0.21.
 kepubverto = "0.2.3"
+# styloria, the family's CSS parser: the upgrade asks its cascade whether the
+# book's CSS already sets a property before writing a presentational attribute
+# as CSS (src/presentational.rs). Its 0.x minors don't mix types, so this floor
+# moves with epubveri's (epubveri 0.31 is on styloria 0.15).
+styloria = "0.15"
 # `--format json` on `check` and `repair`: the shared veripublica envelope.
 # epubsana already links it, so it costs the default build nothing.
 serde_json = "1"

@@ -68,6 +68,10 @@ pub struct RewriteParams {
     /// When `Some`, inject an EPUB 3.4 `<meta property="pageBreakSource">` with
     /// this value (set only for a 3.4 target; see [`OpfInfo::page_break_source`]).
     pub page_break_source: Option<String>,
+    /// When `Some`, add this stylesheet (an href relative to the package
+    /// document) to the manifest: the CSS the upgrade wrote for the
+    /// presentational attributes EPUB 3 no longer allows.
+    pub add_stylesheet: Option<String>,
 }
 
 /// Local (namespace-stripped) name of an XML element.
@@ -802,6 +806,24 @@ pub fn rewrite_opf(xml: &str, params: &RewriteParams) -> Result<String> {
                             writer.write_event(Event::Empty(it))?;
                             writer.write_event(Event::Text(BytesText::from_escaped("\n  ")))?;
                         }
+                        if let Some(href) = &params.add_stylesheet {
+                            let id = (1..)
+                                .map(|n| match n {
+                                    1 => "epublift-presentational-css".to_string(),
+                                    n => format!("epublift-presentational-css-{n}"),
+                                })
+                                .find(|id| !ids.contains(id))
+                                .unwrap_or_default();
+                            ids.insert(id.clone());
+                            writer.write_event(Event::Text(BytesText::from_escaped("\n    ")))?;
+                            let item = format!("{prefix}item");
+                            let mut it = BytesStart::new(item.as_str());
+                            it.push_attribute(("id", id.as_str()));
+                            it.push_attribute(("href", href.as_str()));
+                            it.push_attribute(("media-type", "text/css"));
+                            writer.write_event(Event::Empty(it))?;
+                            writer.write_event(Event::Text(BytesText::from_escaped("\n  ")))?;
+                        }
                         in_manifest = false;
                         writer.write_event(Event::End(e))?;
                     }
@@ -924,6 +946,7 @@ mod tests {
             add_nav: false,
             remove_guide: false,
             page_break_source: pbs,
+            add_stylesheet: None,
         }
     }
 

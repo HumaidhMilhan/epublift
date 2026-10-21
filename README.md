@@ -35,6 +35,7 @@ ePubLift began as a Rust port of an earlier Python implementation but has since 
     *   Converts outdated `<guide>` landmark reference lists into HTML5 `<nav epub:type="landmarks">` maps.
     *   Standardizes legacy XHTML DOCTYPEs (like XHTML 1.1) to modern HTML5 `<!DOCTYPE html>` structure.
     *   Translates EPUB 2 metadata (`opf:role`, `opf:file-as`, `opf:scheme`, several `dc:date`s) into EPUB 3 `<meta refines>` form.
+    *   Writes layout attributes EPUB 3 no longer allows (`<img width="40%">`, a table's `cellspacing`, …) as the CSS the HTML Standard maps them to, where the book's own CSS doesn't already set the property. See [Presentational attributes](docs/usage.md#presentational-attributes-written-as-css).
     *   Finishes with [**epubsana**](https://github.com/veripublica/epubsana)'s EPUB 3 fixes (named entities such as `&nbsp;`, the manifest's `svg` property, empty `<title>`s, XHTML files labelled `text/html`), so a book that was valid in EPUB 2 stays valid in EPUB 3.
 *   **📦 Archive your library (`.eparc`)**: `epublift archive` shrinks EPUB(s) into compact, **lossless** `.eparc` archives to save disk space; `epublift restore` brings any book back — content-exact by default, or re-targeted for a specific reader (`--target 3.3`, `--webp`, `--kepub`). Pure-Rust solid Zstandard on text + fonts, media stored verbatim, so it never grows a book. See [Archive your library](#-archive-your-library-eparc).
 *   **🏷️ Fix book metadata (`meta`)**: Read, hand-edit, or **auto-fill** a book's metadata by ISBN from **Open Library** or **Google Books** — `epublift meta show` / `set` / `enrich`. **Language-aware**: fields are filled only in the book's own language. The lookup uses a **100% pure-Rust** HTTPS client (rustls + RustCrypto — no C), behind the opt-in `metadata` build feature. See the [Metadata guide](docs/metadata.md).
@@ -59,7 +60,8 @@ graph TD
     G --> H[Translate EPUB 2 metadata, inject UTC modified time]
     H --> I[Parse toc.ncx and generate nav.xhtml]
     I --> J[Clean & Standardize DOCTYPEs to HTML5]
-    J -->|Repackage ZIP| K[Store mimetype Uncompressed & Deflate others]
+    J --> J2[Write presentational attributes as CSS]
+    J2 -->|Repackage ZIP| K[Store mimetype Uncompressed & Deflate others]
     K --> K2[EPUB 3 fixes with epubsana]
     K2 --> L[Generate Clean EPUB 3.3 Output]
     L --> M[Write Performance & Compliance Audit Report]

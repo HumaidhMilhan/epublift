@@ -167,6 +167,46 @@ epublift -i book.epub --webp   # images re-encoded to WebP where smaller
 
 `--keep-images` (the old way to ask for the default) still works. `--target 3.4` re-encodes images to its new formats (AVIF/JPEG XL), because that is what asking for 3.4 is for; add `--keep-images` to upgrade to 3.4 without touching them.
 
+### Presentational attributes: written as CSS
+
+EPUB 2 books are XHTML 1.1, which still allowed layout attributes that HTML,
+and so EPUB 3, does not: an image sized in percent (`<img width="40%">`), or a
+table's `cellspacing`, `cellpadding`, `border`, `width` and `height`, and
+`width`, `height` and `valign` on its cells. Left as they are, they make a
+valid EPUB 2 book an invalid EPUB 3 one. The upgrade writes each one as the CSS
+the HTML Standard maps it to (§15 Rendering): a class rule in one stylesheet of
+its own, `epublift-presentational.css`, added to the manifest and linked first
+in each document that uses it.
+
+```html
+<img src="map.jpg" alt="" width="40%"/>                      <!-- before -->
+<img class="epublift-width-40pct" src="map.jpg" alt=""/>     <!-- after  -->
+```
+
+```css
+.epublift-width-40pct { width: 40% }
+```
+
+The book looks the same, because the conversion is made only where nothing can
+change:
+
+- **The book's CSS doesn't set the property.** A reader already ignores the
+  attribute where a rule of the book's own CSS (or a `style` attribute) sets the
+  same property. There, and where a rule *may* set it (under `@media`, say), the
+  attribute is left as written and counted in the report. The question is
+  answered by [styloria](https://github.com/veripublica/styloria)'s cascade.
+- **The book's selectors match as before.** A selector such as `img[width]`
+  notices the attribute going; when one would match differently, the document
+  is left as it is.
+- **Every declaration written is valid CSS.**
+
+A class rule, not a `style` attribute, because the attribute was a
+low-precedence hint and a class rule keeps it close to one; old readers (Kobo's
+engine among them) read it. Values HTML reads the same way in a valid form are
+rewritten instead of moved to CSS (`width="60px"` → `width="60"`), and ones that
+gave no hint at all are removed (`width="auto"`, `border="0"`). Valid values,
+such as `<img width="300">`, are untouched.
+
 ### Kobo `.kepub` output (`--kepub`)
 
 [Kobo](https://www.kobo.com/) e-readers unlock their richer reading features — accurate page turns, reading statistics, and dictionary lookup — when a book carries Kobo's `koboSpan` markup. Add `--kepub` to produce a Kobo-optimized file alongside the normal EPUB 3 upgrades:

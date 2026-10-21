@@ -120,6 +120,23 @@ pub fn write_report(report_path: &Path, report: &Report) -> Result<()> {
         "[x] Replaced legacy <guide> landmarks references with hidden <nav epub:type='landmarks'>"
             .to_string(),
     );
+    let p = &report.presentational;
+    if p.converted > 0 {
+        r.push(format!(
+            "[x] Wrote {} presentational attribute(s) EPUB 3 no longer allows as CSS ({} document(s))",
+            p.converted, p.documents
+        ));
+    }
+    if p.left() > 0 {
+        r.push(format!(
+            "[ ] Left {} presentational attribute(s) as written: the book's CSS sets ({}) or may set ({}) \
+             the property, or its selectors read them ({})",
+            p.left(),
+            p.left_css_sets,
+            p.left_css_may_set,
+            p.left_selectors
+        ));
+    }
     r.push(dash.clone());
     r.push("IMAGE OPTIMIZATION BREAKDOWN".to_string());
     r.push(dash.clone());

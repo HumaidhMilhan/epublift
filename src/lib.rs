@@ -38,6 +38,7 @@ mod nav;
 mod opf;
 #[cfg(feature = "pdf")]
 pub mod pdf;
+mod presentational;
 mod upgrade_fixes;
 // AI "Smart Import": cloud OCR (PDF → Markdown) feeding the offline Markdown core.
 mod report;
@@ -236,6 +237,8 @@ pub struct Report {
     /// EPUB 3.4 "outdated"/deprecated features found in the source (informational;
     /// the content is preserved, not stripped). Empty when none were detected.
     pub outdated_features: Vec<String>,
+    /// Presentational attributes EPUB 3 no longer allows, written as CSS.
+    pub presentational: presentational::Summary,
 }
 
 impl Report {
@@ -613,6 +616,10 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
     // Standardize content DOCTYPEs and namespaces.
     util::standardize_xhtml_files(temp_path, &progress)?;
 
+    // Presentational attributes HTML no longer allows (`<img width="40%">`,
+    // `cellspacing`, …), written as the CSS HTML maps them to.
+    let presentational = presentational::convert_book(temp_path, &package_dir, &progress)?;
+
     // Outdated/deprecated features for the audit report: the OPF-level ones
     // always; plus, for a 3.4 target, content documents still in HTML syntax
     // (EPUB 3.4 is XHTML-only — we flag, we don't rewrite them).
@@ -637,6 +644,7 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
             EpubVersion::V3_4 => info.page_break_source.clone(),
             _ => None,
         },
+        add_stylesheet: presentational.stylesheet.clone(),
     };
     let new_opf = opf::rewrite_opf(&opf_xml, &params)?;
     fs::write(&opf_path, new_opf)?;
@@ -692,6 +700,7 @@ pub fn convert(input: &Path, options: &Options, progress: impl Fn(&str)) -> Resu
         image_metrics: opt.metrics,
         target_version: options.target_version,
         outdated_features: outdated,
+        presentational,
     })
 }
 

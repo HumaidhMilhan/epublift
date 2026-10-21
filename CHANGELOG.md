@@ -10,6 +10,16 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+### Fixed
+- Upgrading an EPUB 2 book no longer makes it invalid over layout attributes
+  that EPUB 2 allowed and EPUB 3 does not: an image sized in percent
+  (`<img width="40%">`), a table's `cellspacing`, `cellpadding`, `border`,
+  `width` and `height`, and `width`, `height` and `valign` on its cells. Each
+  is written as the CSS the HTML Standard maps it to, as a class rule in
+  `epublift-presentational.css`, wherever the book's own CSS doesn't already
+  set that property and none of its selectors reads the attribute; the rest
+  are left as written and counted in the report. See docs/usage.md.
+
 ### Changed
 - **veripublica conventions v0.7** (a long option name means one thing in
   every family tool). Three `meta` spellings change; the old ones still
