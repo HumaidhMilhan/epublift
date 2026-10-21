@@ -992,24 +992,25 @@ dependencies = [
 
 [[package]]
 name = "epubsana"
-version = "0.32.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2707261e4c044508379a2d3f6483a5d723137f6103e8ba71da2599f3532248c6"
+checksum = "bdf0cfb361cb7ca975b111878809e41774f8efe28f8e15572e95026b45f62366"
 dependencies = [
  "epubveri",
  "flate2",
  "roxmltree",
  "serde",
  "serde_json",
+ "styloria",
  "unicode-normalization",
  "zip",
 ]
 
 [[package]]
 name = "epubveri"
-version = "0.30.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da39f74ff898e4b9b8e8c55174f5b4f6edb3983bcc8c323ded61d8b5f6d05598"
+checksum = "58143c601ca9e99720d8b1d3ad953952ab8ace670b0052808fde866165ab05c9"
 dependencies = [
  "flate2",
  "roxmltree",
@@ -1523,9 +1524,9 @@ dependencies = [
 
 [[package]]
 name = "kepubverto"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb8a98b49da6402ada07c4bf4bc115826a774ac39f0532b8e952bb51548152ef"
+checksum = "dac361ef1afdc6ff8ccd266fe1ea65945b571312c321913b23b66f1a3f56737a"
 dependencies = [
  "epubveri",
  "flate2",
@@ -2604,9 +2605,9 @@ dependencies = [
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.15"
+version = "0.103.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
 dependencies = [
  "ring",
  "rustls-pki-types",
@@ -2915,9 +2916,9 @@ dependencies = [
 
 [[package]]
 name = "styloria"
-version = "0.13.0"
+version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e03077c562f26d9cb642bee337e1fd1a97a40f5d5ee2d15ef022b664cd06b253"
+checksum = "75f5b72507c444e0638ede3725bb3c2b58f229d2c8f136ff688dbe2ca8c7fabd"
 
 [[package]]
 name = "subtle"
@@ -3374,9 +3375,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-roots"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
+checksum = "1c1c8e20c8a38fc7d65abfe74eb7280e4aa667e8eec8bc84996d2874810748d9"
 dependencies = [
  "rustls-pki-types",
 ]

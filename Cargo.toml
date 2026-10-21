@@ -108,17 +108,17 @@ rten = { version = "0.26", optional = true }
 # hostile document is declined instead of aborting the process. The validator
 # itself (`epublift check`) stays behind the opt-in `validate` feature; see
 # docs/validate.md.
-epubveri = "0.30.0"
+epubveri = "0.31.0"
 # epubsana, the family's confirm-each-step repairer: `epublift repair` runs its
 # core `repair()` — the same function `epubsana` and its browser build run — so
 # a book repaired here and there comes back identical. Pure Rust, on the same
 # epubveri, zip 9 and roxmltree 0.21 as we are. See docs/repair.md.
-epubsana = "0.32.0"
+epubsana = "0.33.0"
 # kepubverto, the family's KEPUB converter: `--kepub` and the web's .kepub run
 # its `convert()` on the packaged book, so the Kobo markup is exactly what
 # `kepubverto` writes. Pure Rust, on the same epubveri, zip 9 and
 # roxmltree 0.21.
-kepubverto = "0.2.2"
+kepubverto = "0.2.3"
 # `--format json` on `check` and `repair`: the shared veripublica envelope.
 # epubsana already links it, so it costs the default build nothing.
 serde_json = "1"
@@ -172,7 +172,7 @@ rustls = { version = "0.23.40", default-features = false, features = ["std", "tl
 # advisories; master no longer does. Back to a crates.io version once one is cut
 # (tracked upstream in RustCrypto/rustls-rustcrypto#107).
 rustls-rustcrypto = { git = "https://github.com/RustCrypto/rustls-rustcrypto", rev = "70f76c039e587192688af18a80d5d6435dedaf22", optional = true }
-webpki-roots = { version = "1.0.8", optional = true }
+webpki-roots = { version = "1.0.10", optional = true }
 # Catalogue subjects arrive in mixed Unicode forms (NFC/NFD); folding them is
 # how duplicates are found. Already linked through epubveri and epubsana.
 unicode-normalization = { version = "0.1", optional = true }

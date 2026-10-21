@@ -27,9 +27,13 @@ are tagged with the component they belong to.
   much faster on books with many documents: an 805-document book took 11
   minutes on the command line and timed out on the web; it now takes 5
   seconds.
-- epubveri 0.30.0, epubsana 0.32.0 and kepubverto 0.2.2 (crates and the
-  web's Validate and Repair modules together), on styloria 0.13's
-  selector parser.
+- epubveri 0.31.0, epubsana 0.33.0 and kepubverto 0.2.3 (crates and the
+  web's Validate and Repair modules together), on styloria 0.15.
+
+### Security
+- HTTPS (metadata lookup, OCR model download, Smart Import): rustls-webpki
+  0.103.16 and webpki-roots 1.0.10 (RUSTSEC-2026-0382, RUSTSEC-2026-0381:
+  distrusted intermediates could be accepted).
 
 ## [cli-v4.2.0] - 2026-10-17
 
