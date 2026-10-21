@@ -25,12 +25,16 @@ use std::path::Path;
 /// (decided 2026-10-16): an empty `<title>` filled from the book's own table
 /// of contents, heading or title; the `Content-Type` meta spelled as EPUB 3
 /// requires; an empty optional metadata element dropped; an XHTML file
-/// labelled `text/html` declared as `application/xhtml+xml`.
+/// labelled `text/html` declared as `application/xhtml+xml`. Added 2026-10-21:
+/// the package's `unique-identifier` attached to the book's one real
+/// identifier when the element it names is empty or missing (epubsana declines
+/// when there are two candidates).
 const UPGRADE_FIXES: &[&str] = &[
     "fix.empty_title",
     "fix.content_type_meta",
     "fix.empty_metadata_element",
     "fix.html_media_type",
+    "fix.package_identifier",
 ];
 
 /// A pass that changed the book is followed by another, at most this many in

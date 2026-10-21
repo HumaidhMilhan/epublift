@@ -19,6 +19,11 @@ are tagged with the component they belong to.
   `epublift-presentational.css`, wherever the book's own CSS doesn't already
   set that property and none of its selectors reads the attribute; the rest
   are left as written and counted in the report. See docs/usage.md.
+- The upgrade's closing epubsana pass also points the package's
+  `unique-identifier` at the book's one real identifier when the element it
+  names is empty (`fix.package_identifier`; declined when the book holds two
+  candidates, a UUID and an ISBN say). Eight books on the test shelf that
+  stayed invalid after `repair` now come out of the upgrade valid.
 
 ### Changed
 - **veripublica conventions v0.7** (a long option name means one thing in
