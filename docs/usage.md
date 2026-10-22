@@ -172,7 +172,8 @@ epublift -i book.epub --webp   # images re-encoded to WebP where smaller
 EPUB 2 books are XHTML 1.1, which still allowed layout attributes that HTML,
 and so EPUB 3, does not: an image sized in percent (`<img width="40%">`), or a
 table's `cellspacing`, `cellpadding`, `border`, `width` and `height`, and
-`width`, `height` and `valign` on its cells. Left as they are, they make a
+`width`, `height` and `valign` on its cells, or a line break's `clear`
+(`<br clear="all">`). Left as they are, they make a
 valid EPUB 2 book an invalid EPUB 3 one. The upgrade writes each one as the CSS
 the HTML Standard maps it to (§15 Rendering): a class rule in one stylesheet of
 its own, `epublift-presentational.css`, added to the manifest and linked first

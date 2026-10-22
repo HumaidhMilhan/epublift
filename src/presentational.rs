@@ -501,6 +501,22 @@ fn plan_attribute(
                 });
             Some(own("valign", decl))
         }
+        // §15.3.4: `br[clear]` → `clear`; `all` and `both` clear both sides,
+        // any other value gives no hint.
+        ("br", "clear") => {
+            let v = match value.to_ascii_lowercase().as_str() {
+                "left" => Some("left"),
+                "right" => Some("right"),
+                "all" | "both" => Some("both"),
+                _ => None,
+            };
+            let decl = v.map(|v| Decl {
+                class: format!("epublift-clear-{v}"),
+                css: format!("clear: {v}"),
+                props: &["clear"],
+            });
+            Some(own("clear", decl))
+        }
         _ => None,
     }
 }
@@ -1142,6 +1158,28 @@ mod tests {
             "<table cellpadding=\"4\"><tr><td><table><tr><td>in</td></tr></table></td></tr></table>",
         );
         assert_eq!(text.matches("epublift-padding-4px").count(), 1, "{text}");
+    }
+
+    #[test]
+    fn br_clear() {
+        let (_d, s, text, css) = run(
+            "",
+            "",
+            "<p>a<br clear=\"ALL\"/>b<br clear=\"left\"/>c<br clear=\"none\"/>d</p>",
+        );
+        assert_eq!(s.converted, 3);
+        assert!(
+            text.contains(
+                "a<br class=\"epublift-clear-both\"/>b<br class=\"epublift-clear-left\"/>c<br/>d"
+            ),
+            "{text}"
+        );
+        assert!(
+            css.contains(".epublift-clear-both { clear: both }")
+                && css.contains(".epublift-clear-left { clear: left }"),
+            "{css}"
+        );
+        assert!(declarations_valid("clear: right"));
     }
 
     #[test]

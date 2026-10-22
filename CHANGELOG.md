@@ -14,7 +14,8 @@ are tagged with the component they belong to.
 - Upgrading an EPUB 2 book no longer makes it invalid over layout attributes
   that EPUB 2 allowed and EPUB 3 does not: an image sized in percent
   (`<img width="40%">`), a table's `cellspacing`, `cellpadding`, `border`,
-  `width` and `height`, and `width`, `height` and `valign` on its cells. Each
+  `width` and `height`, `width`, `height` and `valign` on its cells, and a
+  line break's `clear` (`<br clear="all">`). Each
   is written as the CSS the HTML Standard maps it to, as a class rule in
   `epublift-presentational.css`, wherever the book's own CSS doesn't already
   set that property and none of its selectors reads the attribute; the rest
