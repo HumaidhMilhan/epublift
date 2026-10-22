@@ -28,13 +28,17 @@ use std::path::Path;
 /// labelled `text/html` declared as `application/xhtml+xml`. Added 2026-10-21:
 /// the package's `unique-identifier` attached to the book's one real
 /// identifier when the element it names is empty or missing (epubsana declines
-/// when there are two candidates).
+/// when there are two candidates). Added 2026-10-22: an `id` that is no longer
+/// valid renamed, with every reference to it, because the XHTML 1.x DTD the
+/// DOCTYPE swap removes trimmed the spaces from an `ID` attribute and HTML
+/// does not (`id="k10 "`).
 const UPGRADE_FIXES: &[&str] = &[
     "fix.empty_title",
     "fix.content_type_meta",
     "fix.empty_metadata_element",
     "fix.html_media_type",
     "fix.package_identifier",
+    "fix.content_document_invalid_id",
 ];
 
 /// A pass that changed the book is followed by another, at most this many in

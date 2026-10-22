@@ -32,6 +32,11 @@ are tagged with the component they belong to.
   names is empty (`fix.package_identifier`; declined when the book holds two
   candidates, a UUID and an ISBN say). Eight books on the test shelf that
   stayed invalid after `repair` now come out of the upgrade valid.
+- The upgrade's closing pass also renames an `id` the upgrade itself made
+  invalid, with every link to it (`fix.content_document_invalid_id`). XHTML
+  1.x trimmed the spaces from an `id` through its DTD, HTML does not, so a
+  valid EPUB 2 book with `id="k10 "` came out invalid. One book on the test
+  shelf; 426 → 427 valid, none worse.
 - `repair` (CLI and web) fixes two more defects, from epubsana 0.34.0: a
   list placed directly inside another list instead of inside its item
   (`<ul><li>…</li><ul>…</ul>` — common in tables of contents) moves into
