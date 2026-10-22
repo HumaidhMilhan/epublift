@@ -20,6 +20,13 @@ are tagged with the component they belong to.
   `epublift-presentational.css`, wherever the book's own CSS doesn't already
   set that property and none of its selectors reads the attribute; the rest
   are left as written and counted in the report. See docs/usage.md.
+- The upgrade renames the elements HTML made obsolete to their HTML
+  counterparts, under the same checks: `<strike>` → `<s>`, `<big>` → `span`
+  at `font-size: larger`, `<center>` around inline content → `div` at
+  `text-align: center`, `<font face size>` → `span` with `font-family` and
+  the legacy size keyword. `<font color>` and `size="7"` are left as they are.
+  Test shelf: all 14 books holding these elements lose 162 → 67 findings, and
+  4 come out valid.
 - The upgrade's closing epubsana pass also points the package's
   `unique-identifier` at the book's one real identifier when the element it
   names is empty (`fix.package_identifier`; declined when the book holds two

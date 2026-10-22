@@ -208,6 +208,18 @@ rewritten instead of moved to CSS (`width="60px"` → `width="60"`), and ones th
 gave no hint at all are removed (`width="auto"`, `border="0"`). Valid values,
 such as `<img width="300">`, are untouched.
 
+The same goes for the elements HTML made obsolete. Each is renamed to its HTML
+counterpart, with a class rule for what the old element's rendering added:
+`<strike>` becomes `<s>` (readers draw both the same way), `<big>` becomes a
+`span` at `font-size: larger`, `<center>` a `div` at `text-align: center`, and
+`<font face="…" size="…">` a `span` with `font-family` and the legacy size
+keyword (`size="2"` → `small`, `+1` → `large`). The same checks apply, with a
+type selector such as `font { … }` or `div { … }` in the book's CSS counting as
+a selector that would match differently. Left as written: a `center` around
+anything but text, images and inline markup (`<center>` also centres blocks,
+which `text-align` does not), `<font color>`, and `size="7"`, whose
+`xxx-large` older readers don't know.
+
 ### Kobo `.kepub` output (`--kepub`)
 
 [Kobo](https://www.kobo.com/) e-readers unlock their richer reading features — accurate page turns, reading statistics, and dictionary lookup — when a book carries Kobo's `koboSpan` markup. Add `--kepub` to produce a Kobo-optimized file alongside the normal EPUB 3 upgrades:

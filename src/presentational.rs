@@ -22,6 +22,10 @@
 //!   document is left as it is;
 //! - every declaration written is a valid one (`check_declaration`).
 //!
+//! Obsolete elements are renamed to their HTML counterparts the same way
+//! ([`plan_element`]): `strike` → `s`, `big` and `font` → `span`, `center` →
+//! `div`, with a class rule for what the old element's rendering added.
+//!
 //! A value HTML reads the same way in a valid form is rewritten instead
 //! (`width="60px"` → `"60"`, `border="yes"` → `"1"`), and one that gives no
 //! hint at all (`width="auto"`, `border="0"`) is removed: neither needs CSS.
@@ -49,6 +53,9 @@ pub const STYLESHEET_NAME: &str = "epublift-presentational.css";
 pub struct Summary {
     /// Attributes written as CSS, rewritten or removed.
     pub converted: usize,
+    /// Obsolete elements (`font`, `big`, `center`, `strike`) renamed to their
+    /// HTML counterparts, with CSS where the rendering needs it.
+    pub elements: usize,
     /// Content documents changed.
     pub documents: usize,
     /// Attributes left as written: the book's CSS sets the property.
@@ -119,10 +126,11 @@ pub fn convert_book(root: &Path, package_dir: &Path, progress: &dyn Fn(&str)) ->
             .file_name()
             .map(|n| util::quote(&n.to_string_lossy()));
     }
-    if summary.converted > 0 {
+    if summary.converted + summary.elements > 0 {
         progress(&format!(
-            "  [+] Wrote {} presentational attribute(s) in {} document(s) as CSS.",
-            summary.converted, summary.documents
+            "  [+] Wrote {} presentational attribute(s) and {} element(s) in {} document(s) as \
+             HTML and CSS.",
+            summary.converted, summary.elements, summary.documents
         ));
     }
     if summary.left() > 0 {
@@ -152,11 +160,16 @@ fn free_name(dir: &Path) -> PathBuf {
 
 // ---- one document -----------------------------------------------------------
 
-/// What happens to the attribute itself.
+/// What happens to the attribute itself, or to the element.
 #[derive(Debug, Clone, PartialEq)]
 enum Action {
     Remove,
     Rewrite(String),
+    /// An obsolete element renamed (`big` → `span`), losing these attributes.
+    Element {
+        rename: &'static str,
+        remove: Vec<&'static str>,
+    },
 }
 
 /// One class rule on one element: its declarations and the properties that
@@ -168,13 +181,23 @@ struct Decl {
     props: &'static [&'static str],
 }
 
-/// One attribute's conversion: the attribute's fate, and the rules it needs.
+/// One attribute's (or element's) conversion: its fate, and the rules it needs.
 #[derive(Debug, Clone)]
 struct Conversion {
     owner: NodeId,
+    /// The attribute, or the element's name for [`Action::Element`].
     attr: &'static str,
     action: Action,
     targets: Vec<(NodeId, Decl)>,
+    /// Further elements on which the book's CSS must not set these
+    /// properties (a `center`'s content must not be made a block).
+    guards: Vec<(NodeId, &'static [&'static str])>,
+}
+
+impl Conversion {
+    fn is_element(&self) -> bool {
+        matches!(self.action, Action::Element { .. })
+    }
 }
 
 /// Returns the document's new text, or `None` when nothing changed.
@@ -245,6 +268,20 @@ fn convert_document(
                 status = status.or(style.property(p).status);
             }
         }
+        for (id, props) in &c.guards {
+            let node = doc.get_node(*id)?;
+            let inline = parse_block_contents(node.attribute("style").unwrap_or("")).0;
+            let style = cascade.style_for(
+                &El {
+                    node,
+                    overlay: None,
+                },
+                Some(inline.as_slice()),
+            );
+            for p in *props {
+                status = status.or(style.property(p).status);
+            }
+        }
         match status {
             styloria::Match::No => accepted.push(c),
             styloria::Match::Yes => summary.left_css_sets += 1,
@@ -253,6 +290,25 @@ fn convert_document(
     }
     if accepted.is_empty() {
         return None;
+    }
+
+    // A class name already taken by another rule (two font faces with one
+    // slug) gets a suffix.
+    let mut pending: BTreeMap<String, String> = BTreeMap::new();
+    for c in accepted.iter_mut() {
+        for (_, d) in c.targets.iter_mut() {
+            let base = d.class.clone();
+            let mut n = 2;
+            while rules
+                .get(&d.class)
+                .or(pending.get(&d.class))
+                .is_some_and(|css| *css != d.css)
+            {
+                d.class = format!("{base}-{n}");
+                n += 1;
+            }
+            pending.insert(d.class.clone(), d.css.clone());
+        }
     }
 
     // The book's selectors must match as before.
@@ -302,6 +358,23 @@ fn convert_document(
                 .find(|a| a.namespace().is_none() && a.name() == *name)?;
             edits.push((a.range_value(), value.clone()));
         }
+        if let Some(new) = change.rename {
+            let name_start = node.range().start + 1;
+            let name_end = tag_name_end(text, node);
+            let old = &text[name_start..name_end];
+            if old.contains(':') {
+                return None;
+            }
+            edits.push((name_start..name_end, new.to_string()));
+            let whole = &text[node.range()];
+            if !whole.trim_end().ends_with("/>") {
+                let close = node.range().start + whole.rfind("</")? + 2;
+                if !text[close..].starts_with(old) {
+                    return None;
+                }
+                edits.push((close..close + old.len(), new.to_string()));
+            }
+        }
         if !change.added.is_empty() {
             let added = change.added.join(" ");
             match node
@@ -340,12 +413,10 @@ fn convert_document(
     for (r, s) in edits {
         out.replace_range(r, &s);
     }
-    for c in &accepted {
-        for (_, d) in &c.targets {
-            rules.insert(d.class.clone(), d.css.clone());
-        }
-    }
-    summary.converted += accepted.len();
+    rules.extend(pending);
+    let elements = accepted.iter().filter(|c| c.is_element()).count();
+    summary.elements += elements;
+    summary.converted += accepted.len() - elements;
     Some(out)
 }
 
@@ -366,6 +437,9 @@ fn plan(doc: &roxmltree::Document<'_>) -> Vec<Conversion> {
             continue;
         }
         let name = node.tag_name().name();
+        if let Some(c) = plan_element(node, name) {
+            out.push(c);
+        }
         for attr in node.attributes().filter(|a| a.namespace().is_none()) {
             if let Some(c) = plan_attribute(node, name, attr.name(), attr.value()) {
                 out.push(c);
@@ -389,12 +463,14 @@ fn plan_attribute(
                 attr,
                 action: Action::Remove,
                 targets: vec![(id, d)],
+                guards: Vec::new(),
             },
             None => Conversion {
                 owner: id,
                 attr,
                 action: Action::Remove,
                 targets: Vec::new(),
+                guards: Vec::new(),
             },
         }
     };
@@ -403,6 +479,7 @@ fn plan_attribute(
         attr,
         action: Action::Rewrite(v),
         targets: Vec::new(),
+        guards: Vec::new(),
     };
     match (element, attr) {
         // §15.4.3: maps to the dimension properties; the attributes must be
@@ -437,6 +514,7 @@ fn plan_attribute(
                 attr: "cellpadding",
                 action: Action::Remove,
                 targets,
+                guards: Vec::new(),
             })
         }
         // §15.3.8: `border` → border widths on the table, and the UA rules
@@ -473,6 +551,7 @@ fn plan_attribute(
                         attr: "border",
                         action: Action::Remove,
                         targets,
+                        guards: Vec::new(),
                     }
                 }
             })
@@ -519,6 +598,146 @@ fn plan_attribute(
         }
         _ => None,
     }
+}
+
+/// HTML's counterpart of an obsolete element (§15.3.3, §15.3.4): `strike` is
+/// `s` (the same UA rule draws both), `big` a `span` at `font-size: larger`,
+/// `center` a `div` at `text-align: center`, and `font` a `span` with its
+/// `face` as `font-family` and its `size` as the legacy keyword. Declined:
+/// an attribute this does not know (`font color`, for now), `size="7"`
+/// (`xxx-large` is too new for old readers), and a `center` holding anything
+/// but phrasing content, which its legacy centering of blocks would treat
+/// differently from `text-align`.
+fn plan_element(node: Node<'_, '_>, element: &str) -> Option<Conversion> {
+    const GLOBAL: &[&str] = &["id", "class", "style", "title", "lang", "dir"];
+    let id = node.id();
+    let unknown = |allowed: &[&str]| {
+        node.attributes().any(|a| {
+            a.namespace().is_none() && !GLOBAL.contains(&a.name()) && !allowed.contains(&a.name())
+        })
+    };
+    let conversion = |attr, rename, remove: Vec<&'static str>, targets: Vec<Decl>| Conversion {
+        owner: id,
+        attr,
+        action: Action::Element { rename, remove },
+        targets: targets.into_iter().map(|d| (id, d)).collect(),
+        guards: Vec::new(),
+    };
+    match element {
+        "strike" if !unknown(&[]) => Some(conversion("strike", "s", Vec::new(), Vec::new())),
+        "big" if !unknown(&[]) => Some(conversion(
+            "big",
+            "span",
+            Vec::new(),
+            vec![Decl {
+                class: "epublift-big".to_string(),
+                css: "font-size: larger".to_string(),
+                props: &["font-size"],
+            }],
+        )),
+        "center" if !unknown(&[]) => {
+            const PHRASING: &[&str] = &[
+                "a", "abbr", "b", "bdi", "bdo", "big", "br", "cite", "code", "data", "dfn", "em",
+                "font", "i", "img", "kbd", "mark", "q", "s", "samp", "small", "span", "strike",
+                "strong", "sub", "sup", "time", "tt", "u", "var", "wbr",
+            ];
+            let inner: Vec<Node<'_, '_>> = node
+                .descendants()
+                .skip(1)
+                .filter(|n| n.is_element())
+                .collect();
+            if inner.iter().any(|n| {
+                n.tag_name().namespace() != Some(XHTML_NS)
+                    || !PHRASING.contains(&n.tag_name().name())
+            }) {
+                return None;
+            }
+            let mut c = conversion(
+                "center",
+                "div",
+                Vec::new(),
+                vec![Decl {
+                    class: "epublift-center".to_string(),
+                    css: "text-align: center".to_string(),
+                    props: &["text-align"],
+                }],
+            );
+            c.guards = inner.iter().map(|n| (n.id(), &["display"][..])).collect();
+            Some(c)
+        }
+        "font" if !unknown(&["face", "size"]) => {
+            let mut targets = Vec::new();
+            if let Some(face) = node
+                .attribute("face")
+                .map(str::trim)
+                .filter(|f| !f.is_empty())
+            {
+                targets.push(Decl {
+                    class: format!("epublift-font-family-{}", slug(face)),
+                    css: format!("font-family: {face}"),
+                    props: &["font-family"],
+                });
+            }
+            if let Some(size) = node.attribute("size") {
+                match parse_legacy_font_size(size) {
+                    Some(7) => return None,
+                    Some(n) => {
+                        let kw = ["x-small", "small", "medium", "large", "x-large", "xx-large"]
+                            [n as usize - 1];
+                        targets.push(Decl {
+                            class: format!("epublift-font-size-{kw}"),
+                            css: format!("font-size: {kw}"),
+                            props: &["font-size"],
+                        });
+                    }
+                    None => {}
+                }
+            }
+            let present = ["face", "size"]
+                .into_iter()
+                .filter(|a| node.attribute(*a).is_some())
+                .collect();
+            Some(conversion("font", "span", present, targets))
+        }
+        _ => None,
+    }
+}
+
+/// The rules for parsing a legacy font size (§15.3.4): `+N` and `-N` are
+/// relative to 3, the result clamped to 1–7; `None` gives no hint.
+fn parse_legacy_font_size(v: &str) -> Option<u8> {
+    let s = v.trim_start_matches(is_html_space);
+    let (mode, s) = match s.as_bytes().first() {
+        Some(b'+') => (1, &s[1..]),
+        Some(b'-') => (-1, &s[1..]),
+        _ => (0, s),
+    };
+    let digits = &s[..s.bytes().take_while(u8::is_ascii_digit).count()];
+    if digits.is_empty() {
+        return None;
+    }
+    let n: i64 = digits.parse().unwrap_or(i64::MAX / 2);
+    let n = match mode {
+        1 => n.saturating_add(3),
+        -1 => 3 - n,
+        _ => n,
+    };
+    Some(n.clamp(1, 7) as u8)
+}
+
+/// A class-name fragment from a font family list (`Times New Roman, serif` →
+/// `times-new-roman-serif`).
+fn slug(v: &str) -> String {
+    let mut out = String::new();
+    for c in v.chars().flat_map(char::to_lowercase) {
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+        } else if !out.ends_with('-') && !out.is_empty() {
+            out.push('-');
+        }
+    }
+    let out = out.trim_end_matches('-').to_string();
+    if out.is_empty() { "x".to_string() } else { out }
 }
 
 /// The `td` and `th` elements of a table's own rows (HTML's cell positions
@@ -645,6 +864,8 @@ fn is_html_space(c: char) -> bool {
 
 #[derive(Debug, Default)]
 struct Change {
+    /// The element's new name.
+    rename: Option<&'static str>,
     removed: Vec<&'static str>,
     replaced: Vec<(&'static str, String)>,
     added: Vec<String>,
@@ -659,6 +880,10 @@ fn overlay(doc: &roxmltree::Document<'_>, accepted: &[Conversion]) -> HashMap<No
         match &c.action {
             Action::Remove => ch.removed.push(c.attr),
             Action::Rewrite(v) => ch.replaced.push((c.attr, v.clone())),
+            Action::Element { rename, remove } => {
+                ch.rename = Some(rename);
+                ch.removed.extend(remove);
+            }
         }
         for (id, d) in &c.targets {
             let ch = map.entry(*id).or_default();
@@ -718,7 +943,10 @@ impl Element for El<'_, '_, '_> {
             .any(|c| c.is_element() || (c.is_text() && !c.text().unwrap_or("").is_empty()))
     }
     fn local_name(&self) -> &str {
-        self.node.tag_name().name()
+        self.overlay
+            .and_then(|o| o.get(&self.node.id()))
+            .and_then(|ch| ch.rename)
+            .unwrap_or(self.node.tag_name().name())
     }
     fn namespace(&self) -> Option<&str> {
         self.node.tag_name().namespace()
@@ -1180,6 +1408,87 @@ mod tests {
             "{css}"
         );
         assert!(declarations_valid("clear: right"));
+    }
+
+    #[test]
+    fn obsolete_elements() {
+        let (_d, s, text, css) = run(
+            "",
+            "",
+            "<p><big>B</big> <strike class=\"x\">S</strike> <font face=\"Times New Roman, serif\" size=\"+1\">F</font> \
+             <font>plain</font></p><center><img src=\"c.jpg\" alt=\"\"/></center>",
+        );
+        assert_eq!((s.elements, s.converted), (5, 0), "{text}");
+        assert!(
+            text.contains("<span class=\"epublift-big\">B</span>"),
+            "{text}"
+        );
+        assert!(text.contains("<s class=\"x\">S</s>"), "{text}");
+        assert!(
+            text.contains("<span class=\"epublift-font-family-times-new-roman-serif epublift-font-size-large\">F</span>"),
+            "{text}"
+        );
+        assert!(text.contains("<span>plain</span>"), "{text}");
+        assert!(
+            text.contains("<div class=\"epublift-center\"><img src=\"c.jpg\" alt=\"\"/></div>"),
+            "{text}"
+        );
+        for rule in [
+            ".epublift-big { font-size: larger }",
+            ".epublift-center { text-align: center }",
+            ".epublift-font-family-times-new-roman-serif { font-family: Times New Roman, serif }",
+            ".epublift-font-size-large { font-size: large }",
+        ] {
+            assert!(css.contains(rule), "{rule}\n{css}");
+        }
+        crate::util::parse_xml_with_dtd(&text).unwrap();
+    }
+
+    #[test]
+    fn obsolete_elements_declined() {
+        // A type selector for the old name, or for the new one, keeps the document.
+        let (_d, s, text, _) = run(
+            "font { color: red }",
+            "",
+            "<p><font face=\"Arial\">F</font></p>",
+        );
+        assert_eq!((s.elements, s.left_selectors), (0, 1));
+        assert!(text.contains("<font face=\"Arial\">"), "{text}");
+        let (_d, s, _, _) = run(
+            "div { margin: 0 }",
+            "",
+            "<center><img src=\"c\" alt=\"\"/></center>",
+        );
+        assert_eq!(s.left_selectors, 1);
+        // CSS that already decides the property.
+        let (_d, s, _, _) = run("p big { font-size: 2em }", "", "<p><big>B</big></p>");
+        assert_eq!(s.left_css_sets, 1);
+        // A center around blocks, an unknown attribute, size 7: not planned.
+        let (_d, s, _, _) = run(
+            "",
+            "",
+            "<center><p>x</p></center><p><font color=\"red\">c</font><font size=\"7\">7</font></p>",
+        );
+        assert_eq!(s, Summary::default());
+        // A center whose image the book's CSS makes a block.
+        let (_d, s, _, _) = run(
+            "img { display: block }",
+            "",
+            "<center><img src=\"c\" alt=\"\"/></center>",
+        );
+        assert_eq!((s.elements, s.left_css_sets), (0, 1));
+    }
+
+    #[test]
+    fn legacy_font_size() {
+        assert_eq!(parse_legacy_font_size("2"), Some(2));
+        assert_eq!(parse_legacy_font_size(" +1"), Some(4));
+        assert_eq!(parse_legacy_font_size("-1"), Some(2));
+        assert_eq!(parse_legacy_font_size("-9"), Some(1));
+        assert_eq!(parse_legacy_font_size("+9"), Some(7));
+        assert_eq!(parse_legacy_font_size("0"), Some(1));
+        assert_eq!(parse_legacy_font_size("big"), None);
+        assert_eq!(slug("Garamond Premr Pro, "), "garamond-premr-pro");
     }
 
     #[test]

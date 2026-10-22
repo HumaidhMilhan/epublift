@@ -121,10 +121,11 @@ pub fn write_report(report_path: &Path, report: &Report) -> Result<()> {
             .to_string(),
     );
     let p = &report.presentational;
-    if p.converted > 0 {
+    if p.converted + p.elements > 0 {
         r.push(format!(
-            "[x] Wrote {} presentational attribute(s) EPUB 3 no longer allows as CSS ({} document(s))",
-            p.converted, p.documents
+            "[x] Wrote {} presentational attribute(s) and {} element(s) EPUB 3 no longer allows as \
+             HTML and CSS ({} document(s))",
+            p.converted, p.elements, p.documents
         ));
     }
     if p.left() > 0 {
