@@ -32,6 +32,12 @@ are tagged with the component they belong to.
   names is empty (`fix.package_identifier`; declined when the book holds two
   candidates, a UUID and an ISBN say). Eight books on the test shelf that
   stayed invalid after `repair` now come out of the upgrade valid.
+- `repair` (CLI and web) fixes two more defects, from epubsana 0.34.0: a
+  list placed directly inside another list instead of inside its item
+  (`<ul><li>…</li><ul>…</ul>` — common in tables of contents) moves into
+  the item before it, and an image declared as one standard type but holding
+  another (a PNG declared `image/jpeg`) gets its declaration corrected.
+  Test shelf, `repair` then upgrade: 418 → 426 valid books, none worse.
 
 ### Changed
 - **veripublica conventions v0.7** (a long option name means one thing in
@@ -50,7 +56,7 @@ are tagged with the component they belong to.
   much faster on books with many documents: an 805-document book took 11
   minutes on the command line and timed out on the web; it now takes 5
   seconds.
-- epubveri 0.31.0, epubsana 0.33.0 and kepubverto 0.2.3 (crates and the
+- epubveri 0.31.0, epubsana 0.34.0 and kepubverto 0.2.3 (crates and the
   web's Validate and Repair modules together), on styloria 0.15.
 
 ### Security

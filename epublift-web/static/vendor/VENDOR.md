@@ -51,9 +51,9 @@ Update the table above, check that the package still imports only from
 
 | | |
 | --- | --- |
-| Package | [`@veripublica/epubsana-wasm`](https://www.npmjs.com/package/@veripublica/epubsana-wasm) **0.33.0** |
-| npm integrity | `sha512-egh192ZSecD0KXNZBZMDo1LZAo3+gwK4nGjGeA5uxdt5z6J47ucpX3vAw9t2dBjst3It3Z5iycMOr6IEsd6JXw==` |
-| Built from | [veripublica/epubsana](https://github.com/veripublica/epubsana) tag `v0.33.0`, commit `80c058437d3616f2a2e4d7da124a5534df00444e` |
+| Package | [`@veripublica/epubsana-wasm`](https://www.npmjs.com/package/@veripublica/epubsana-wasm) **0.34.0** |
+| npm integrity | `sha512-IZa6A2hKHFkp+MSWu/7d1gnI/kidUawiw/EAKkQ7lEnPdm0RZruWzjx94tp2XzPVVGCVQTjAQKYwjgeoXrsYvw==` |
+| Built from | [veripublica/epubsana](https://github.com/veripublica/epubsana) tag `v0.34.0`, commit `598c73160717a6b6c7b32cd6dda4f365a823f66b` |
 | Must match | the `epubsana` version in the root `Cargo.toml` — `epublift repair` and this browser build run the same `repair()`, so the same book with the same fixes approved comes back identical |
 
 It carries its own copy of epubveri (the repairer validates before and after
@@ -64,7 +64,7 @@ still be on the same epubveri minor; epubsana's `Cargo.toml` states its floor.
 
 | File | Origin | SHA-256 |
 | --- | --- | --- |
-| `epubsana_wasm_bg.wasm` | verbatim from the package | `6c97c6fb0e63aea70cfff217055fab4f2d2f968155ad5d1fd1f4aaa6c78d7c95` |
+| `epubsana_wasm_bg.wasm` | verbatim from the package | `63169c4b6991fa1e2b3e0bfaa1bbf4afebc07d39dab1a0386f216b8aa0fdb272` |
 | `epubsana_wasm_bg.js` | verbatim from the package (wasm-bindgen glue) | `7bdb6ec6f02adfacf0203aff11714e21428a6c0c0958c90b5ac2e8b8f3019306` |
 | `epubsana-LICENSE`, `epubsana-LICENSE-COMMERCIAL.md` | the package's `LICENSE` and `LICENSE-COMMERCIAL.md` | — |
 | `epubsana.js` | **ours** — the browser loader, the same shape as `epubveri.js` | — |
