@@ -167,7 +167,7 @@ epublift meta enrich --isbn 9780… [--assume-language tr] \  # auto-fill missin
   in (they are listed either way).
 - `enrich` shows the catalogue's cover next to the book's own (sizes, and a
   note when it is smaller); `--include-cover` makes it the book's cover.
-- **Renamed after cli-v4.2.0** (one long name, one meaning across the veripublica
+- **Renamed in cli-v4.3.0** (one long name, one meaning across the veripublica
   tools): `enrich --lang` → `--assume-language`, `enrich --cover` →
   `--include-cover` (`--cover` takes a path in `set`), and `show --json` →
   `show --format metadata` (`--json` is the shared envelope elsewhere). The old

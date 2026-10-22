@@ -10,7 +10,12 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+## [cli-v4.3.0] - 2026-10-22
+
 ### Fixed
+- Test shelf, 562 books, `repair -y` then upgrade: 394 → 427 come out valid
+  (cli-v4.2.0 → cli-v4.3.0), and no book has more errors than before. The
+  changes below add up to that.
 - Upgrading an EPUB 2 book no longer makes it invalid over layout attributes
   that EPUB 2 allowed and EPUB 3 does not: an image sized in percent
   (`<img width="40%">`), a table's `cellspacing`, `cellpadding`, `border`,
@@ -68,6 +73,29 @@ are tagged with the component they belong to.
 - HTTPS (metadata lookup, OCR model download, Smart Import): rustls-webpki
   0.103.16 and webpki-roots 1.0.10 (RUSTSEC-2026-0382, RUSTSEC-2026-0381:
   distrusted intermediates could be accepted).
+
+## [web-v1.28.0] - 2026-10-22
+
+### Changed
+- **Validate runs epubveri 0.31.0 and Repair epubsana 0.34.0** in the
+  browser, the same versions as the CLI. Repair gains the two fixes of
+  cli-v4.3.0 (a list placed directly in another list, an image declared as
+  the wrong standard type). On 60 shelf books, Repair agrees with the CLI on
+  every one.
+
+### Fixed
+- Optimize carries the upgrade fixes of cli-v4.3.0: layout attributes and
+  obsolete elements EPUB 3 no longer allows are written as HTML and CSS; an
+  empty unique identifier points at the book's one real identifier; an `id`
+  the upgrade made invalid is renamed with its links. Test shelf, Repair then
+  Optimize: 394 → 427 of 562 books come out valid (web-v1.27.0 → web-v1.28.0),
+  and no book has more errors than before.
+- Optimize no longer times out on books with many XHTML 1.x documents (an
+  805-document book went from over the 120-second limit to 5 seconds).
+
+### Security
+- HTTPS (metadata lookup, Smart Import): rustls-webpki 0.103.16 and
+  webpki-roots 1.0.10 (RUSTSEC-2026-0382, RUSTSEC-2026-0381).
 
 ## [cli-v4.2.0] - 2026-10-17
 
