@@ -10,6 +10,15 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+### Changed
+- structured-zstd 0.2 (Dependabot #66). `.eparc` archives from earlier
+  releases restore exactly as before, and new ones restore with earlier
+  releases too: all 562 books on the test shelf come back entry for entry in
+  every direction. The experimental shared-dictionary packing
+  (`--zstd --zstd-mode shared-dict`) trains on each file as a separate
+  sample, which is 35% faster and 0.2% smaller over the shelf; a book the
+  trainer can't learn from is packed per entry instead of failing.
+
 ## [cli-v4.3.0] - 2026-10-22
 
 ### Fixed

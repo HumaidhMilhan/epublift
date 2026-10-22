@@ -28,9 +28,7 @@
 
 use anyhow::{Result, bail};
 use structured_zstd::decoding::FrameDecoder;
-use structured_zstd::dictionary::{
-    FastCoverOptions, FinalizeOptions, create_fastcover_dict_from_source,
-};
+use structured_zstd::dictionary::{FastCoverOptions, FinalizeOptions, optimize_fastcover_dict};
 use structured_zstd::encoding::{CompressionLevel, FrameCompressor, compress_to_vec};
 
 /// One archive member: a name (ZIP path) and its *uncompressed* bytes.
@@ -171,22 +169,34 @@ pub fn pack_zstd_shared_dict_with(
         .filter(|e| is_dict_eligible(&e.name))
         .flat_map(|e| e.data.iter().copied())
         .collect();
-    let eligible = entries.iter().filter(|e| is_dict_eligible(&e.name)).count();
+    // Each eligible file is one training sample; the segment and dmer sizes
+    // are searched, as `zstd --train` does.
+    let sample_sizes: Vec<usize> = entries
+        .iter()
+        .filter(|e| is_dict_eligible(&e.name))
+        .map(|e| e.data.len())
+        .collect();
+    let eligible = sample_sizes.len();
     if corpus.len() < MIN_DICT_CORPUS || eligible < params.min_files {
         return pack_zstd(entries, level);
     }
 
     // Train a dictionary sized relative to the corpus, capped to a sane range.
     let dict_size = (corpus.len() / params.size_divisor).clamp(MIN_DICT_CORPUS, params.size_cap);
-    let mut dict = Vec::new();
-    create_fastcover_dict_from_source(
-        corpus.as_slice(),
-        &mut dict,
+    // The trainer refuses a book it cannot learn from (too few samples of
+    // usable size, say): then there is nothing to share, so pack per entry.
+    let Ok((dict, _)) = optimize_fastcover_dict(
+        &corpus,
+        &sample_sizes,
         dict_size,
         &FastCoverOptions::default(),
-        FinalizeOptions::default(),
-    )
-    .map_err(|e| anyhow::anyhow!("dictionary training failed: {e}"))?;
+        FinalizeOptions {
+            dict_id: None,
+            level,
+        },
+    ) else {
+        return pack_zstd(entries, level);
+    };
 
     // One dictionary-primed compressor, reused across all text entries.
     let mut dict_c: FrameCompressor = FrameCompressor::new(CompressionLevel::Level(level));
