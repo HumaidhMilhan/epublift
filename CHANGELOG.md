@@ -19,6 +19,14 @@ are tagged with the component they belong to.
   sample, which is 35% faster and 0.2% smaller over the shelf; a book the
   trainer can't learn from is packed per entry instead of failing.
 
+## [web-v1.28.1] - 2026-10-22
+
+### Changed
+- Archive and Restore run on structured-zstd 0.2. Archives made by earlier
+  releases restore exactly as before, and new ones restore with earlier
+  releases too: on the 562-book test shelf every book comes back entry for
+  entry in every direction.
+
 ## [cli-v4.3.0] - 2026-10-22
 
 ### Fixed
