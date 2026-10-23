@@ -7,7 +7,7 @@ resolver = "2"
 
 [package]
 name = "epublift"
-version = "4.3.0"
+version = "4.4.0"
 edition = "2024"
 license = "AGPL-3.0-or-later"
 description = "EPUB toolbox: upgrade to EPUB 3.3, optionally shrink images to WebP, validate, repair, edit metadata, archive"
@@ -108,22 +108,22 @@ rten = { version = "0.26", optional = true }
 # hostile document is declined instead of aborting the process. The validator
 # itself (`epublift check`) stays behind the opt-in `validate` feature; see
 # docs/validate.md.
-epubveri = "0.31.0"
+epubveri = "0.33.0"
 # epubsana, the family's confirm-each-step repairer: `epublift repair` runs its
 # core `repair()` — the same function `epubsana` and its browser build run — so
 # a book repaired here and there comes back identical. Pure Rust, on the same
 # epubveri, zip 9 and roxmltree 0.21 as we are. See docs/repair.md.
-epubsana = "0.34.0"
+epubsana = "0.35.0"
 # kepubverto, the family's KEPUB converter: `--kepub` and the web's .kepub run
 # its `convert()` on the packaged book, so the Kobo markup is exactly what
 # `kepubverto` writes. Pure Rust, on the same epubveri, zip 9 and
 # roxmltree 0.21.
-kepubverto = "0.2.3"
+kepubverto = "0.3.0"
 # styloria, the family's CSS parser: the upgrade asks its cascade whether the
 # book's CSS already sets a property before writing a presentational attribute
 # as CSS (src/presentational.rs). Its 0.x minors don't mix types, so this floor
-# moves with epubveri's (epubveri 0.31 is on styloria 0.15).
-styloria = "0.15"
+# moves with epubveri's (epubveri 0.33 is on styloria 0.16).
+styloria = "0.16"
 # `--format json` on `check` and `repair`: the shared veripublica envelope.
 # epubsana already links it, so it costs the default build nothing.
 serde_json = "1"

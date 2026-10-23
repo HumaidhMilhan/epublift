@@ -8,16 +8,16 @@ copied verbatim from npm; only its tiny entry file is replaced by ours.
 
 | | |
 | --- | --- |
-| Package | [`@veripublica/epubveri-wasm`](https://www.npmjs.com/package/@veripublica/epubveri-wasm) **0.31.0** |
-| npm integrity | `sha512-+rvN8DGMmgt9z/KEypJgRzRfx/nhYvOE3ktcjRYfukpeHq93QEniUEvMmct0HLB1RgAz4K6Jrlaq5tGDcdCcBw==` |
-| Built from | [veripublica/epubveri](https://github.com/veripublica/epubveri) tag `v0.31.0`, commit `86d28ec61f675311657df3ca5dba5fa40a35364b`, by its `publish-npm.yml` workflow (SLSA provenance attestation on the npm release) |
+| Package | [`@veripublica/epubveri-wasm`](https://www.npmjs.com/package/@veripublica/epubveri-wasm) **0.33.0** |
+| npm integrity | `sha512-fG4bteG0NLKLvUarTywFo8IVOtMAsfxt5ABzZ43CHp3U1N/aJWDlw5rCgJ2t76n8F5Hhguq3jN1mIYtf50zwwQ==` |
+| Built from | [veripublica/epubveri](https://github.com/veripublica/epubveri) tag `v0.33.0`, commit `e057da614cb1d8d553f361dba4935b43c7caa8bb`, by its `publish-npm.yml` workflow (SLSA provenance attestation on the npm release) |
 | Must match | the `epubveri` version in the root `Cargo.toml` — the CLI's `epublift check` and this browser build have to agree about the same book |
 
 ### Files
 
 | File | Origin | SHA-256 |
 | --- | --- | --- |
-| `epubveri_bg.wasm` | verbatim from the package | `6eb76d4440a034ac2e651acb15c46d5a8e0a617843cff2f56f28133355f00695` |
+| `epubveri_bg.wasm` | verbatim from the package | `d3fe0b248340e1bcb1bf5fd5c4f3db49a1e7e22aee8cfc0ccdcceeced1418bd4` |
 | `epubveri_bg.js` | verbatim from the package (wasm-bindgen glue) | `92adbcc8672c59bd1aae5b31abf5b397d28fe2e6772762f19b79c24d4dabf770` |
 | `epubveri-LICENSE`, `epubveri-LICENSE.COMMERCIAL.md` | the package's `LICENSE` and `LICENSE.COMMERCIAL.md` | — |
 | `epubveri.js` | **ours** — the browser loader | — |
@@ -51,9 +51,9 @@ Update the table above, check that the package still imports only from
 
 | | |
 | --- | --- |
-| Package | [`@veripublica/epubsana-wasm`](https://www.npmjs.com/package/@veripublica/epubsana-wasm) **0.34.0** |
-| npm integrity | `sha512-IZa6A2hKHFkp+MSWu/7d1gnI/kidUawiw/EAKkQ7lEnPdm0RZruWzjx94tp2XzPVVGCVQTjAQKYwjgeoXrsYvw==` |
-| Built from | [veripublica/epubsana](https://github.com/veripublica/epubsana) tag `v0.34.0`, commit `598c73160717a6b6c7b32cd6dda4f365a823f66b` |
+| Package | [`@veripublica/epubsana-wasm`](https://www.npmjs.com/package/@veripublica/epubsana-wasm) **0.35.0** |
+| npm integrity | `sha512-h/hD0wZaZNp2x72axYDFWDCozvwE7WBxqr7utcxEKFSsuclwLopPUfNrU5Vkq48zbg0FBFRjJTyMuS10F9dfHw==` |
+| Built from | [veripublica/epubsana](https://github.com/veripublica/epubsana) tag `v0.35.0`, commit `98f370dbb76e0e0adaca24707846ac7005a685ff` |
 | Must match | the `epubsana` version in the root `Cargo.toml` — `epublift repair` and this browser build run the same `repair()`, so the same book with the same fixes approved comes back identical |
 
 It carries its own copy of epubveri (the repairer validates before and after
@@ -64,7 +64,7 @@ still be on the same epubveri minor; epubsana's `Cargo.toml` states its floor.
 
 | File | Origin | SHA-256 |
 | --- | --- | --- |
-| `epubsana_wasm_bg.wasm` | verbatim from the package | `63169c4b6991fa1e2b3e0bfaa1bbf4afebc07d39dab1a0386f216b8aa0fdb272` |
+| `epubsana_wasm_bg.wasm` | verbatim from the package | `ab6f104459d29d77ec9b1dc576e5dda7af75e0889fa33851aef45f430e26ed3b` |
 | `epubsana_wasm_bg.js` | verbatim from the package (wasm-bindgen glue) | `7bdb6ec6f02adfacf0203aff11714e21428a6c0c0958c90b5ac2e8b8f3019306` |
 | `epubsana-LICENSE`, `epubsana-LICENSE-COMMERCIAL.md` | the package's `LICENSE` and `LICENSE-COMMERCIAL.md` | — |
 | `epubsana.js` | **ours** — the browser loader, the same shape as `epubveri.js` | — |

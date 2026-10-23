@@ -10,7 +10,17 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+## [cli-v4.4.0] - 2026-10-23
+
 ### Changed
+- epubveri 0.33.0, epubsana 0.35.0, kepubverto 0.3.0 and styloria 0.16, in
+  the CLI and in the browser's Validate and Repair. Repair now closes a
+  stylesheet left with unclosed blocks (CSS-008) and drops a CSS background
+  or list image the book doesn't contain (RSC-007); neither changes how the
+  book looks. Test shelf, 562 books: `repair -y` fixes 5 more errors in
+  5 books, and 1 more book comes out valid. Validate, the upgrade and
+  `--kepub` give the same findings and the same files as before on every
+  book; the browser's Validate agrees with `epublift check` on all 562.
 - structured-zstd 0.2 (Dependabot #66). `.eparc` archives from earlier
   releases restore exactly as before, and new ones restore with earlier
   releases too: all 562 books on the test shelf come back entry for entry in
@@ -18,6 +28,17 @@ are tagged with the component they belong to.
   (`--zstd --zstd-mode shared-dict`) trains on each file as a separate
   sample, which is 35% faster and 0.2% smaller over the shelf; a book the
   trainer can't learn from is packed per entry instead of failing.
+
+## [web-v1.29.0] - 2026-10-23
+
+### Changed
+- epubveri 0.33.0 and epubsana 0.35.0, in the browser's Validate and Repair
+  (the vendored WASM is re-vendored). Repair now closes a stylesheet left
+  with unclosed blocks (CSS-008) and drops a CSS background or list image
+  the book doesn't contain (RSC-007); neither changes how the book looks.
+  Measured with the CLI's repair on the 562-book test shelf: `repair -y`
+  fixes 5 more errors in 5 books, and 1 more book comes out valid. Validate
+  in the browser gives the same findings as `epublift check` on all 562.
 
 ## [web-v1.28.1] - 2026-10-22
 

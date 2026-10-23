@@ -925,7 +925,7 @@ checksum = "877362cb7b70d1c617f0cd3c67708bd58d894a86af5104018e2c10ebaee3c02f"
 
 [[package]]
 name = "epublift"
-version = "4.3.0"
+version = "4.4.0"
 dependencies = [
  "almost-enough",
  "any_ascii",
@@ -972,7 +972,7 @@ dependencies = [
 
 [[package]]
 name = "epublift-web"
-version = "1.28.1"
+version = "1.29.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -993,9 +993,9 @@ dependencies = [
 
 [[package]]
 name = "epubsana"
-version = "0.34.0"
+version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bc8960fb3a902411dca482c964cdbe4a6c4d3154b20fd23e0df6815cb604eea"
+checksum = "f6eb223e5d8a674d61de2472ceb578ae5ea232ab9d93d96aeecd07e61b79d1c0"
 dependencies = [
  "epubveri",
  "flate2",
@@ -1009,9 +1009,9 @@ dependencies = [
 
 [[package]]
 name = "epubveri"
-version = "0.31.0"
+version = "0.33.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58143c601ca9e99720d8b1d3ad953952ab8ace670b0052808fde866165ab05c9"
+checksum = "9fd5a202e296516beb0170bebe0209ebc808ebb8c8d4808b2c52347dfcdce085"
 dependencies = [
  "flate2",
  "roxmltree",
@@ -1525,15 +1525,16 @@ dependencies = [
 
 [[package]]
 name = "kepubverto"
-version = "0.2.3"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dac361ef1afdc6ff8ccd266fe1ea65945b571312c321913b23b66f1a3f56737a"
+checksum = "14994ac6b5f55cee8ca964ac54ce4357a5bdb26bab76d29fb5b93f91e3a7068d"
 dependencies = [
  "epubveri",
  "flate2",
  "roxmltree",
  "serde",
  "serde_json",
+ "styloria",
  "zip",
 ]
 
@@ -2917,9 +2918,9 @@ dependencies = [
 
 [[package]]
 name = "styloria"
-version = "0.15.0"
+version = "0.16.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75f5b72507c444e0638ede3725bb3c2b58f229d2c8f136ff688dbe2ca8c7fabd"
+checksum = "ea36bbe5bd655e822e14682b4fb5f39b18ad449657408d2d92639006a88b16ef"
 
 [[package]]
 name = "subtle"
