@@ -10,6 +10,20 @@ are tagged with the component they belong to.
 
 ## [Unreleased]
 
+## [cli-v4.4.1] - 2026-10-24
+
+### Security
+- crypto-bigint 0.7.6 and ctutils 0.4.5 (RUSTSEC-2026-0387, RUSTSEC-2026-0385):
+  constant-time fixes in the HTTPS stack used by `meta enrich`, `--cover` and
+  the OCR model download. Nothing else changes.
+
+## [web-v1.29.1] - 2026-10-24
+
+### Security
+- crypto-bigint 0.7.6 and ctutils 0.4.5 (RUSTSEC-2026-0387, RUSTSEC-2026-0385):
+  constant-time fixes in the HTTPS stack used by Metadata lookups and Smart
+  Import. Nothing else changes.
+
 ## [cli-v4.4.0] - 2026-10-23
 
 ### Changed
